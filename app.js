@@ -1,21 +1,34 @@
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
-import { getAuth, onAuthStateChanged, signInAnonymously, signInWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-import { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc, writeBatch, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+const fb = (window.REGALI_CONFIG || {}).firebase || {};
+const live = !!fb.apiKey;
+const CDN = 'https://www.gstatic.com/firebasejs/10.12.2/';
+// Firebase si carica solo se config.js è compilato: senza, la pagina funziona in modalità demo.
+const [fbApp, fbAuth, fbStore] = live
+  ? await Promise.all([import(CDN + 'firebase-app.js'), import(CDN + 'firebase-auth.js'), import(CDN + 'firebase-firestore.js')])
+  : [{}, {}, {}];
+const { initializeApp } = fbApp;
+const { getAuth, onAuthStateChanged, signInAnonymously, signInWithEmailAndPassword, signOut } = fbAuth;
+const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc, writeBatch, query, orderBy } = fbStore;
 
 {
-  const fb = (window.REGALI_CONFIG || {}).firebase || {};
-  const live = !!fb.apiKey;
   const app = live ? initializeApp(fb) : null;
   const auth = live ? getAuth(app) : null;
   const db = live ? getFirestore(app) : null;
+  const seed = JSON.parse(document.getElementById('data').textContent).items;
   const $ = (id) => document.getElementById(id);
-  const bands = ['var(--c1)', 'var(--c2)', 'var(--c3)', 'var(--c4)', 'var(--c5)'];
+  // Illustrazioni: metti i file nella cartella img/ e scrivi qui i percorsi.
+  // intestazione: un'immagine accanto al titolo. segnaposto: una o più immagini per le idee senza foto (si alternano).
+  const ILLUSTRAZIONI = { intestazione: '', segnaposto: [] }; // es. { intestazione: 'img/torta.png', segnaposto: ['img/regalo.png', 'img/fiori.png'] }
   const state = { items: live ? [] : seed, reserved: new Map(), loading: live, error: false };
   let filter = 'Tutte', admin = false;
   const myUid = () => (auth && auth.currentUser ? auth.currentUser.uid : null);
   const isMineRes = (id) => state.reserved.has(id) && state.reserved.get(id) === myUid();
 
-  for (let i = 0; i < 40; i++) $('bunting').appendChild(document.createElement('i'));
+  if (ILLUSTRAZIONI.intestazione) {
+    const hero = document.createElement('img');
+    hero.className = 'hero'; hero.alt = ''; hero.src = ILLUSTRAZIONI.intestazione;
+    hero.addEventListener('error', () => hero.remove());
+    $('head').appendChild(hero);
+  }
 
   function el(tag, props, ...kids) {
     const n = document.createElement(tag);
@@ -24,7 +37,6 @@ import { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc
     return n;
   }
   const cats = () => [...new Set(state.items.map((i) => i.cat).filter(Boolean))];
-  const bandOf = (cat) => bands[Math.max(0, cats().indexOf(cat)) % bands.length];
   const safeUrl = (u) => /^https?:\/\//i.test(u || '') ? u : '';
   const safeImg = (u) => /^https:\/\//i.test(u || '') ? u : '';
   const hostOf = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return ''; } };
@@ -96,11 +108,32 @@ import { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc
   }
 
   // ---------- schede ----------
+  function giftIcon() {
+    const ns = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('viewBox', '0 0 64 64'); svg.setAttribute('fill', 'none'); svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '3'); svg.setAttribute('stroke-linecap', 'round'); svg.setAttribute('stroke-linejoin', 'round');
+    ['M10 26h44v28H10z', 'M8 18h48v8H8z', 'M32 18v36', 'M32 18c-6-10-18-9-16-3 1 4 10 3 16 3zm0 0c6-10 18-9 16-3-1 4-10 3-16 3z'].forEach((d) => {
+      const p = document.createElementNS(ns, 'path'); p.setAttribute('d', d); svg.appendChild(p);
+    });
+    return svg;
+  }
+
   function mediaOf(it) {
     const imgs = (it.imgs || []).map(safeImg).filter(Boolean);
     const media = el('div', { class: 'media' });
     const ar = ['4 / 3', '1 / 1', '3 / 4', '5 / 4'][(parseInt(String(it.id).replace(/\D/g, ''), 10) || 0) % 4];
-    const placeholder = () => el('div', { class: 'ph', style: '--ar:' + ar, 'aria-hidden': 'true' }, (it.title || '?').charAt(0).toUpperCase());
+    const num = parseInt(String(it.id).replace(/\D/g, ''), 10) || 0;
+    const placeholder = () => {
+      const ph = el('div', { class: 'ph', style: '--ar:' + ar, 'aria-hidden': 'true' });
+      const arts = ILLUSTRAZIONI.segnaposto;
+      if (arts.length) {
+        const img = el('img', { src: arts[num % arts.length], alt: '' });
+        img.addEventListener('error', () => img.replaceWith(giftIcon()));
+        ph.appendChild(img);
+      } else ph.appendChild(giftIcon());
+      return ph;
+    };
     if (!imgs.length) { media.appendChild(placeholder()); return media; }
     const main = el('img', { src: imgs[0], alt: it.title, loading: 'lazy', referrerpolicy: 'no-referrer' });
     main.addEventListener('error', () => main.replaceWith(placeholder()));
@@ -132,7 +165,7 @@ import { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc
     else if (!list.length) grid.appendChild(el('div', { class: 'empty' }, admin ? 'Nessuna idea qui. Premi "Nuova idea" per aggiungerne una.' : 'Nessuna idea in questa categoria, per ora.'));
     list.forEach((it) => {
       const taken = isTaken(it), isMine = isMineRes(it.id);
-      const card = el('article', { class: 'card' + (taken ? ' done' : ''), style: '--band:' + bandOf(it.cat) });
+      const card = el('article', { class: 'card' + (taken ? ' done' : '') });
       if (taken) card.appendChild(el('div', { class: 'stamp' }, isMine ? 'Lo prendi tu' : 'Già preso'));
       const media = mediaOf(it); media.prepend(el('span', { class: 'tag' }, it.cat || 'Varie')); card.appendChild(media);
       const body = el('div', { class: 'body' }, el('h2', null, it.title));

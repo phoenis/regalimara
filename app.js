@@ -126,7 +126,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     return svg;
   }
 
-  function mediaOf(it, full) {
+  function mediaOf(it) {
     const imgs = (it.imgs || []).map(safeImg).filter(Boolean);
     const media = el('div', { class: 'media' });
     const ar = ['4 / 3', '1 / 1', '3 / 4', '5 / 4'][(parseInt(String(it.id).replace(/\D/g, ''), 10) || 0) % 4];
@@ -145,48 +145,62 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     const main = el('img', { src: imgs[0], alt: it.title, loading: 'lazy', referrerpolicy: 'no-referrer' });
     main.addEventListener('error', () => main.replaceWith(placeholder()));
     media.appendChild(main);
-    if (imgs.length > 1 && !full) media.appendChild(el('span', { class: 'more' }, '+' + (imgs.length - 1) + ' foto'));
-    if (imgs.length > 1 && full) {
-      const thumbs = el('div', { class: 'thumbs' });
-      imgs.forEach((src, n) => {
-        const b = el('button', { type: 'button', 'aria-label': 'Foto ' + (n + 1), 'aria-current': String(n === 0) }, el('img', { src, alt: '', referrerpolicy: 'no-referrer' }));
-        b.addEventListener('click', () => {
-          main.src = src;
-          thumbs.querySelectorAll('button').forEach((x) => x.setAttribute('aria-current', String(x === b)));
-        });
-        thumbs.appendChild(b);
-      });
-      media.appendChild(thumbs);
-    }
+    if (imgs.length > 1) media.appendChild(el('span', { class: 'more' }, '+' + (imgs.length - 1) + ' foto'));
     return media;
   }
 
-  function openDetail(it) {
-    const layer = $('layer');
-    const prev = document.activeElement;
+  // ---------- pagina dettagli (indirizzo: #/idea/<id>) ----------
+  const routeId = () => { const m = location.hash.match(/^#\/idea\/([^/]+)$/); return m ? decodeURIComponent(m[1]) : null; };
+  let listScroll = 0, fromList = false, galIdx = 0, galFor = null;
+  function goDetail(id) { listScroll = window.scrollY; fromList = true; location.hash = '#/idea/' + encodeURIComponent(id); }
+  function backLink() {
+    return el('a', { class: 'back', href: '#/', onclick: (e) => { e.preventDefault(); if (fromList) history.back(); else location.hash = '#/'; } }, '← Tutte le idee');
+  }
+
+  function adminActions(it) {
+    return el('div', { class: 'row-actions' },
+      el('button', { class: 'btn', type: 'button', onclick: () => editItem(it) }, 'Modifica'),
+      state.reserved.has(it.id)
+        ? el('button', { class: 'btn', type: 'button', onclick: () => releaseRes(it) }, 'Libera prenotazione')
+        : el('button', { class: 'btn', type: 'button', onclick: () => toggleDone(it) }, it.done ? 'Rimetti in lista' : 'Segna come preso'),
+      el('button', { class: 'btn danger', type: 'button', onclick: () => deleteItem(it) }, 'Elimina'));
+  }
+
+  function renderDetail(id) {
+    const box = $('detail'); box.replaceChildren(backLink());
+    const it = state.items.find((x) => x.id === id);
+    if (!it) {
+      box.appendChild(el('div', { class: 'empty' }, state.loading ? 'Carico l\'idea…' : 'Questa idea non c\'è più.'));
+      document.title = 'Idee regalo per Mara'; return;
+    }
+    document.title = it.title + ' · Idee regalo per Mara';
+    if (galFor !== id) { galFor = id; galIdx = 0; }
+    const imgs = (it.imgs || []).map(safeImg).filter(Boolean);
+    if (galIdx >= imgs.length) galIdx = 0;
     const taken = isTaken(it), isMine = isMineRes(it.id);
-    const onKey = (e) => { if (e.key === 'Escape') close(); };
-    const close = () => { document.removeEventListener('keydown', onKey); layer.replaceChildren(); if (prev && prev.focus) prev.focus(); };
     const url = safeUrl(it.link);
+
+    const gallery = el('div', { class: 'gallery' }, mediaOf({ ...it, imgs: imgs.length ? [imgs[galIdx]] : [] }));
+    if (imgs.length > 1) gallery.appendChild(el('div', { class: 'gthumbs' }, ...imgs.map((src, n) =>
+      el('button', { type: 'button', 'aria-label': 'Foto ' + (n + 1), 'aria-current': String(n === galIdx), onclick: () => { galIdx = n; render(); } }, el('img', { src, alt: '', referrerpolicy: 'no-referrer' })))));
+
     const info = el('div', { class: 'info' });
-    info.append(el('span', { class: 'cat' }, it.cat || 'Varie'), el('h3', null, it.title));
+    info.append(el('span', { class: 'cat' }, it.cat || 'Varie'), el('h1', { class: 'dtitle' }, it.title));
     if (it.price) info.appendChild(el('div', { class: 'price' }, it.price));
     if (it.note) info.appendChild(el('p', { class: 'full' }, it.note));
     if (taken) info.appendChild(el('p', { class: 'taken' }, isMine ? 'Hai scelto tu questo regalo.' : 'Qualcuno ha già scelto questo regalo.'));
     if (url) info.appendChild(el('a', { class: 'btn ' + (taken ? '' : 'primary') + ' wide', href: url, target: '_blank', rel: 'noopener noreferrer' }, 'Dove comprarlo: ' + (hostOf(url) || 'vai al sito') + ' ↗'));
     else info.appendChild(el('p', { class: 'hint-d' }, 'Per questa idea non c\'è un link: le foto servono a dare un\'idea.'));
-    if (!taken) info.appendChild(el('button', { class: 'btn ' + (url ? '' : 'primary') + ' wide', type: 'button', onclick: () => { close(); reserveItem(it); } }, 'Lo prendo io'));
-    else if (isMine) info.appendChild(el('button', { class: 'btn quiet wide', type: 'button', onclick: () => { close(); releaseRes(it); } }, 'Annulla, non lo prendo più'));
-    const closeBtn = el('button', { class: 'x', type: 'button', 'aria-label': 'Chiudi', onclick: close }, '×');
-    const sheet = el('div', { class: 'detail', role: 'dialog', 'aria-modal': 'true', 'aria-label': it.title }, mediaOf(it, true), info);
-    const overlay = el('div', { class: 'overlay' }, el('div', { class: 'sheet-wrap' }, sheet, closeBtn));
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
-    layer.replaceChildren(overlay);
-    document.addEventListener('keydown', onKey);
-    closeBtn.focus();
+    if (!taken) info.appendChild(el('button', { class: 'btn ' + (url ? '' : 'primary') + ' wide', type: 'button', onclick: () => reserveItem(it) }, 'Lo prendo io'));
+    else if (isMine) info.appendChild(el('button', { class: 'btn quiet wide', type: 'button', onclick: () => releaseRes(it) }, 'Annulla, non lo prendo più'));
+    if (admin) info.appendChild(adminActions(it));
+    box.appendChild(el('div', { class: 'dpage' }, gallery, info));
   }
 
   function render() {
+    const rid = routeId();
+    document.body.classList.toggle('is-detail', !!rid);
+    if (rid) renderDetail(rid); else { $('detail').replaceChildren(); document.title = 'Idee regalo per Mara'; }
     if (filter !== 'Tutte' && !cats().includes(filter)) filter = 'Tutte';
     const chips = $('chips'); chips.replaceChildren();
     ['Tutte', ...cats()].forEach((c) => chips.appendChild(el('button', { class: 'chip', type: 'button', 'aria-pressed': String(c === filter), onclick: () => { filter = c; render(); } }, c)));
@@ -201,20 +215,15 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
       const card = el('article', { class: 'card' + (taken ? ' done' : '') });
       if (taken) card.appendChild(el('div', { class: 'stamp' }, isMine ? 'Lo prendi tu' : 'Già preso'));
       const media = mediaOf(it); media.prepend(el('span', { class: 'tag' }, it.cat || 'Varie'));
-      media.addEventListener('click', () => openDetail(it));
+      media.addEventListener('click', () => goDetail(it.id));
       card.appendChild(media);
-      const body = el('div', { class: 'body' }, el('h2', null, el('button', { class: 'open', type: 'button', onclick: () => openDetail(it) }, it.title)));
+      const body = el('div', { class: 'body' }, el('h2', null, el('button', { class: 'open', type: 'button', onclick: () => goDetail(it.id) }, it.title)));
       if (it.note) body.appendChild(el('p', { class: 'note' }, it.note));
       if (it.price) body.appendChild(el('div', { class: 'price' }, it.price));
-      body.appendChild(el('button', { class: 'link-btn', type: 'button', onclick: () => openDetail(it) }, 'Vedi dettagli →'));
+      body.appendChild(el('button', { class: 'link-btn', type: 'button', onclick: () => goDetail(it.id) }, 'Dettagli →'));
       if (!taken) body.appendChild(el('button', { class: 'btn primary reserve', type: 'button', onclick: () => reserveItem(it) }, 'Lo prendo io'));
-      else if (isMine) body.appendChild(el('button', { class: 'btn quiet reserve', type: 'button', onclick: () => releaseRes(it) }, 'Annulla, non lo prendo più'));
-      if (admin) body.appendChild(el('div', { class: 'row-actions' },
-        el('button', { class: 'btn', type: 'button', onclick: () => editItem(it) }, 'Modifica'),
-        state.reserved.has(it.id)
-          ? el('button', { class: 'btn', type: 'button', onclick: () => releaseRes(it) }, 'Libera prenotazione')
-          : el('button', { class: 'btn', type: 'button', onclick: () => toggleDone(it) }, it.done ? 'Rimetti in lista' : 'Segna come preso'),
-        el('button', { class: 'btn danger', type: 'button', onclick: () => deleteItem(it) }, 'Elimina')));
+      else if (isMine) body.appendChild(el('button', { class: 'btn quiet reserve', type: 'button', onclick: () => releaseRes(it) }, 'Annulla'));
+      if (admin) body.appendChild(adminActions(it));
       card.appendChild(body); grid.appendChild(card);
     });
     const open = state.items.filter((i) => !isTaken(i)).length;
@@ -307,6 +316,10 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
   }
 
   $('open-admin').addEventListener('click', openLogin);
+  window.addEventListener('hashchange', () => {
+    render();
+    if (routeId()) window.scrollTo(0, 0); else requestAnimationFrame(() => window.scrollTo(0, listScroll));
+  });
   if (live) {
     onAuthStateChanged(auth, (u) => {
       admin = !!u && !u.isAnonymous;

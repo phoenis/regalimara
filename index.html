@@ -1,0 +1,287 @@
+<title>Idee regalo per Mara</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Nunito:wght@400;600;800&display=swap">
+<style>
+/* Layout: festa di compleanno. Bandierine in cima, titolo grande, schede leggermente inclinate come biglietti appesi. */
+:root {
+  --bg: #FFF6FB; --fg: #2B1B3D; --muted: #6B5A7E; --card: #FFFFFF; --line: #EBDAF3;
+  --c1: #FF4D6D; --c2: #FFB703; --c3: #14B8A6; --c4: #7C4DFF; --c5: #3A86FF;
+  --on-band: #2B1B3D; --accent: #E0245E; --on-accent: #FFFFFF; --shadow: 0 6px 0 rgba(43,27,61,.10);
+  --display: "Bagel Fat One", "Arial Rounded MT Bold", system-ui, sans-serif;
+  --body: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1E1330; --fg: #FFF1FA; --muted: #BBA6D6; --card: #2A1B42; --line: #43305F;
+    --accent: #FF6B8E; --on-accent: #2B1B3D; --shadow: 0 6px 0 rgba(0,0,0,.35); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1E1330; --fg: #FFF1FA; --muted: #BBA6D6; --card: #2A1B42; --line: #43305F;
+  --accent: #FF6B8E; --on-accent: #2B1B3D; --shadow: 0 6px 0 rgba(0,0,0,.35); color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 17px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 48px; min-height: 100vh; position: relative; overflow-x: hidden;
+}
+body::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: .5;
+  background:
+    radial-gradient(circle at 8% 22%, var(--c2) 0 5px, transparent 6px),
+    radial-gradient(circle at 92% 14%, var(--c3) 0 6px, transparent 7px),
+    radial-gradient(circle at 80% 62%, var(--c1) 0 4px, transparent 5px),
+    radial-gradient(circle at 14% 76%, var(--c4) 0 5px, transparent 6px),
+    radial-gradient(circle at 50% 90%, var(--c5) 0 4px, transparent 5px),
+    radial-gradient(circle at 36% 40%, var(--c1) 0 3px, transparent 4px),
+    radial-gradient(circle at 66% 30%, var(--c2) 0 3px, transparent 4px);
+}
+.wrap { position: relative; z-index: 1; max-width: 1040px; margin: 0 auto; }
+.bunting { display: flex; height: 44px; overflow: hidden; margin-inline: -16px; }
+.bunting i { flex: 0 0 56px; height: 40px; clip-path: polygon(0 0, 100% 0, 50% 100%); }
+.bunting i:nth-child(5n+1) { background: var(--c1); } .bunting i:nth-child(5n+2) { background: var(--c2); }
+.bunting i:nth-child(5n+3) { background: var(--c3); } .bunting i:nth-child(5n+4) { background: var(--c4); }
+.bunting i:nth-child(5n+5) { background: var(--c5); }
+header { padding: 28px 0 8px; }
+.kicker { font-weight: 800; font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); margin: 0 0 6px; }
+h1 { font-family: var(--display); font-weight: 400; font-size: clamp(40px, 9vw, 84px); line-height: 1; margin: 0; text-wrap: balance; }
+h1 span { color: var(--accent); }
+.lede { max-width: 56ch; margin: 14px 0 0; color: var(--muted); font-size: 18px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 24px 0 8px; }
+.chip {
+  font: 800 14px var(--body); border: 2px solid var(--fg); background: transparent; color: var(--fg);
+  border-radius: 999px; padding: 6px 14px; cursor: pointer;
+}
+.chip[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+.chip:focus-visible, button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid var(--c5); outline-offset: 2px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 290px), 1fr)); gap: 26px 22px; margin-top: 22px; }
+.card {
+  background: var(--card); border: 2px solid var(--fg); border-radius: 18px; box-shadow: var(--shadow);
+  display: flex; flex-direction: column; min-width: 0; overflow: hidden; position: relative;
+}
+.card:nth-child(odd) { transform: rotate(-.8deg); } .card:nth-child(even) { transform: rotate(.7deg); }
+.band { background: var(--band); color: var(--on-band); padding: 8px 16px; font-weight: 800; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; display: flex; justify-content: space-between; gap: 8px; }
+.body { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 0; }
+.card h2 { font-family: var(--display); font-weight: 400; font-size: 25px; line-height: 1.1; margin: 0; text-wrap: balance; overflow-wrap: anywhere; }
+.note { margin: 0; color: var(--muted); overflow-wrap: anywhere; }
+.price { font-weight: 800; margin-top: auto; padding-top: 6px; }
+.link { color: var(--accent); font-weight: 800; }
+.done { opacity: .6; }
+.stamp {
+  position: absolute; top: 52px; right: 12px; transform: rotate(10deg); border: 3px solid var(--c1); color: var(--c1);
+  font-family: var(--display); font-size: 20px; padding: 2px 10px; border-radius: 10px; background: var(--card);
+}
+.empty { border: 2px dashed var(--line); border-radius: 18px; padding: 36px 20px; text-align: center; color: var(--muted); grid-column: 1 / -1; }
+footer { margin-top: 56px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; color: var(--muted); font-size: 15px; }
+.btn {
+  font: 800 15px var(--body); border: 2px solid var(--fg); background: var(--card); color: var(--fg);
+  border-radius: 12px; padding: 8px 16px; cursor: pointer;
+}
+.btn.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.btn.danger { border-color: var(--c1); color: var(--c1); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn.quiet { border-color: transparent; background: transparent; text-decoration: underline; color: var(--muted); padding-inline: 4px; }
+.admin-bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--fg); color: var(--bg);
+  border-radius: 14px; padding: 10px 14px; margin-top: 18px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+}
+.admin-bar strong { margin-right: auto; }
+.admin-bar .btn { border-color: var(--bg); }
+.row-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.row-actions .btn { padding: 4px 12px; font-size: 14px; }
+.overlay { position: fixed; inset: 0; z-index: 20; background: rgba(20,10,30,.6); display: grid; place-items: center; padding: 16px; overflow-y: auto; }
+.dlg { background: var(--card); color: var(--fg); border: 2px solid var(--fg); border-radius: 18px; padding: 22px; width: min(100%, 460px); box-shadow: var(--shadow); }
+.dlg h3 { font-family: var(--display); font-weight: 400; font-size: 26px; margin: 0 0 12px; }
+.dlg label { display: block; font-weight: 800; font-size: 14px; margin: 12px 0 4px; }
+.dlg input[type=text], .dlg input[type=password], .dlg input[type=url], .dlg textarea, .dlg select {
+  width: 100%; font: inherit; padding: 9px 12px; border-radius: 10px; border: 2px solid var(--line); background: var(--bg); color: var(--fg);
+}
+.dlg .check { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.dlg .actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; margin-top: 18px; }
+.msg { margin: 10px 0 0; font-weight: 700; color: var(--c1); min-height: 1.4em; }
+.toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 10px 18px; border-radius: 999px; font-weight: 800; z-index: 30; max-width: 90vw; }
+@media (prefers-reduced-motion: no-preference) { .card { transition: transform .15s; } .card:hover { transform: rotate(0) translateY(-3px); } }
+</style>
+
+<div class="bunting" id="bunting" aria-hidden="true"></div>
+<div class="wrap">
+  <header>
+    <p class="kicker">Compleanno in arrivo</p>
+    <h1>Idee regalo per <span>Mara</span></h1>
+    <p class="lede">Una lista di idee per chi vuole fare un regalo a Mara e non sa da dove cominciare. Scegli quella che ti ispira, oppure usala come punto di partenza.</p>
+  </header>
+  <div id="adminbar" hidden></div>
+  <div class="chips" id="chips" role="group" aria-label="Filtra per categoria"></div>
+  <main class="grid" id="grid"></main>
+  <footer>
+    <span id="count"></span>
+    <button class="btn quiet" id="open-admin" type="button">Area riservata</button>
+  </footer>
+</div>
+<div id="layer"></div>
+
+<script type="application/json" id="data">{"pw":"","items":[
+{"id":"i1","title":"Corso di cucina in due","note":"Una serata a impastare, tagliare e assaggiare insieme, con uno chef che spiega tutto passo per passo.","cat":"Esperienze","price":"80–120 €","link":"","done":false},
+{"id":"i2","title":"Set di tè e infusi artigianali","note":"Sei miscele in barattolini di latta, con un colino a forma di fiore. Da bere sul divano.","cat":"Cucina","price":"25–35 €","link":"","done":false},
+{"id":"i3","title":"Un limone in vaso","note":"Un alberello vero per il balcone, con terriccio e istruzioni per farlo fiorire.","cat":"Casa","price":"20–40 €","link":"","done":false},
+{"id":"i4","title":"Libro di ricette illustrato","note":"Uno di quelli grandi, con le foto, da sfogliare anche senza cucinare niente.","cat":"Libri","price":"20–30 €","link":"","done":false},
+{"id":"i5","title":"Cena a sorpresa","note":"Un tavolo prenotato in un posto nuovo. Il nome si scopre solo all'ingresso.","cat":"Esperienze","price":"60–100 €","link":"","done":false},
+{"id":"i6","title":"Plaid in lana morbidissimo","note":"Grande abbastanza per due, in un colore caldo. Per le sere d'autunno.","cat":"Casa","price":"40–60 €","link":"","done":false},
+{"id":"i7","title":"Giornata alle terme","note":"Ingresso per un pomeriggio di acqua calda e niente da fare.","cat":"Benessere","price":"50–90 €","link":"","done":false},
+{"id":"i8","title":"Candela profumata fatta a mano","note":"Cera di soia, profumo di fico e cedro, nel vasetto di vetro che poi si riusa.","cat":"Casa","price":"15–25 €","link":"","done":false},
+{"id":"i9","title":"Kit per fare il pane","note":"Lievito madre, cestino per la lievitazione e lama per incidere. La domenica profuma.","cat":"Cucina","price":"30–45 €","link":"","done":false}
+]}</script>
+
+<script>
+(function () {
+  const pristine = document.body.innerHTML;
+  const state = JSON.parse(document.getElementById('data').textContent);
+  const $ = (id) => document.getElementById(id);
+  const bands = ['var(--c1)', 'var(--c2)', 'var(--c3)', 'var(--c4)', 'var(--c5)'];
+  let filter = 'Tutte', admin = false, dirty = false;
+  try { admin = sessionStorage.getItem('regali-admin') === '1'; } catch (e) {}
+
+  for (let i = 0; i < 40; i++) $('bunting').appendChild(document.createElement('i'));
+
+  function el(tag, props, ...kids) {
+    const n = document.createElement(tag);
+    if (props) for (const k in props) { if (k === 'class') n.className = props[k]; else if (k.startsWith('on')) n.addEventListener(k.slice(2), props[k]); else n.setAttribute(k, props[k]); }
+    for (const kid of kids) if (kid != null) n.append(kid);
+    return n;
+  }
+  const cats = () => [...new Set(state.items.map((i) => i.cat).filter(Boolean))];
+  const bandOf = (cat) => bands[Math.max(0, cats().indexOf(cat)) % bands.length];
+  const safeUrl = (u) => /^https?:\/\//i.test(u || '') ? u : '';
+
+  function toast(text) {
+    const t = el('div', { class: 'toast', role: 'status' }, text);
+    document.body.appendChild(t); setTimeout(() => t.remove(), 3200);
+  }
+
+  function render() {
+    if (filter !== 'Tutte' && !cats().includes(filter)) filter = 'Tutte';
+    const chips = $('chips'); chips.replaceChildren();
+    ['Tutte', ...cats()].forEach((c) => chips.appendChild(el('button', { class: 'chip', type: 'button', 'aria-pressed': String(c === filter), onclick: () => { filter = c; render(); } }, c)));
+
+    const list = state.items.filter((i) => filter === 'Tutte' || i.cat === filter);
+    const grid = $('grid'); grid.replaceChildren();
+    if (!list.length) grid.appendChild(el('div', { class: 'empty' }, admin ? 'Nessuna idea qui. Premi "Nuova idea" per aggiungerne una.' : 'Nessuna idea in questa categoria, per ora.'));
+    list.forEach((it) => {
+      const card = el('article', { class: 'card' + (it.done ? ' done' : ''), style: '--band:' + bandOf(it.cat) });
+      card.appendChild(el('div', { class: 'band' }, el('span', null, it.cat || 'Varie')));
+      if (it.done) card.appendChild(el('div', { class: 'stamp' }, 'Già preso'));
+      const body = el('div', { class: 'body' }, el('h2', null, it.title));
+      if (it.note) body.appendChild(el('p', { class: 'note' }, it.note));
+      if (it.price) body.appendChild(el('div', { class: 'price' }, it.price));
+      const url = safeUrl(it.link);
+      if (url) body.appendChild(el('a', { class: 'link', href: url, target: '_blank', rel: 'noopener noreferrer' }, 'Guarda dove trovarlo'));
+      if (admin) body.appendChild(el('div', { class: 'row-actions' },
+        el('button', { class: 'btn', type: 'button', onclick: () => editItem(it) }, 'Modifica'),
+        el('button', { class: 'btn', type: 'button', onclick: () => { it.done = !it.done; markDirty(); render(); } }, it.done ? 'Rimetti in lista' : 'Segna come preso'),
+        el('button', { class: 'btn danger', type: 'button', onclick: () => { state.items = state.items.filter((x) => x !== it); markDirty(); render(); } }, 'Elimina')));
+      card.appendChild(body); grid.appendChild(card);
+    });
+    const open = state.items.filter((i) => !i.done).length;
+    $('count').textContent = state.items.length + ' idee, ' + open + ' ancora da regalare';
+    renderAdminBar();
+  }
+
+  function renderAdminBar() {
+    const bar = $('adminbar'); bar.hidden = !admin; bar.className = admin ? 'admin-bar' : ''; bar.replaceChildren();
+    $('open-admin').hidden = admin;
+    if (!admin) return;
+    bar.append(
+      el('strong', null, dirty ? 'Gestione: ci sono modifiche da salvare' : 'Gestione attiva'),
+      el('button', { class: 'btn', type: 'button', onclick: () => editItem(null) }, 'Nuova idea'),
+      el('button', { class: 'btn', type: 'button', onclick: changePassword }, 'Cambia password'),
+      el('button', { class: 'btn primary', id: 'save-btn', type: 'button', onclick: save }, 'Salva e pubblica'),
+      el('button', { class: 'btn', type: 'button', onclick: () => { admin = false; try { sessionStorage.removeItem('regali-admin'); } catch (e) {} render(); } }, 'Esci'));
+    $('save-btn').disabled = !dirty;
+  }
+  function markDirty() { dirty = true; }
+
+  function modal(title, fields, onSubmit, submitLabel) {
+    const layer = $('layer');
+    const msg = el('p', { class: 'msg', role: 'alert' });
+    const form = el('form', { class: 'dlg', novalidate: '' }, el('h3', null, title), ...fields, msg);
+    const close = () => layer.replaceChildren();
+    form.append(el('div', { class: 'actions' },
+      el('button', { class: 'btn', type: 'button', onclick: close }, 'Annulla'),
+      el('button', { class: 'btn primary', type: 'submit' }, submitLabel || 'Conferma')));
+    form.addEventListener('submit', async (e) => { e.preventDefault(); const err = await onSubmit(form, close); if (err) msg.textContent = err; });
+    layer.replaceChildren(el('div', { class: 'overlay' }, form));
+    const first = form.querySelector('input,textarea,select'); if (first) first.focus();
+  }
+  const field = (id, label, extra) => [el('label', { for: id }, label), extra];
+
+  function editItem(it) {
+    const isNew = !it;
+    const data = it || { id: 'i' + Date.now().toString(36), title: '', note: '', cat: filter !== 'Tutte' ? filter : '', price: '', link: '', done: false };
+    const dl = el('datalist', { id: 'f-cats' }, ...cats().map((c) => el('option', { value: c })));
+    modal(isNew ? 'Nuova idea' : 'Modifica idea', [
+      ...field('f-title', 'Titolo', el('input', { id: 'f-title', type: 'text', value: data.title, maxlength: '80' })),
+      ...field('f-note', 'Descrizione', el('textarea', { id: 'f-note', rows: '3', maxlength: '240' }, data.note)),
+      ...field('f-cat', 'Categoria', el('input', { id: 'f-cat', type: 'text', value: data.cat, list: 'f-cats', maxlength: '24' })), dl,
+      ...field('f-price', 'Prezzo indicativo', el('input', { id: 'f-price', type: 'text', value: data.price, maxlength: '24' })),
+      ...field('f-link', 'Link (facoltativo)', el('input', { id: 'f-link', type: 'url', value: data.link, placeholder: 'https://' })),
+    ], (form, close) => {
+      const v = (id) => form.querySelector('#' + id).value.trim();
+      if (!v('f-title')) return 'Scrivi almeno il titolo.';
+      if (v('f-link') && !safeUrl(v('f-link'))) return 'Il link deve iniziare con http:// o https://';
+      Object.assign(data, { title: v('f-title'), note: v('f-note'), cat: v('f-cat'), price: v('f-price'), link: v('f-link') });
+      if (isNew) state.items.unshift(data);
+      markDirty(); close(); render();
+    }, 'Salva idea');
+  }
+
+  async function hash(s) {
+    try {
+      const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('regali-mara:' + s));
+      return [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, '0')).join('');
+    } catch (e) { return 'p' + btoa(unescape(encodeURIComponent(s))); }
+  }
+  function enterAdmin() { admin = true; try { sessionStorage.setItem('regali-admin', '1'); } catch (e) {} render(); }
+
+  function openLogin() {
+    if (!state.pw) return createPassword('Crea la password', true);
+    modal('Area riservata', [...field('f-pw', 'Password', el('input', { id: 'f-pw', type: 'password', autocomplete: 'current-password' }))], async (form, close) => {
+      const h = await hash(form.querySelector('#f-pw').value);
+      if (h !== state.pw) return 'Password sbagliata.';
+      close(); enterAdmin();
+    }, 'Entra');
+  }
+  function createPassword(title, entering) {
+    modal(title, [
+      ...field('f-pw1', 'Nuova password (almeno 6 caratteri)', el('input', { id: 'f-pw1', type: 'password', autocomplete: 'new-password' })),
+      ...field('f-pw2', 'Ripetila', el('input', { id: 'f-pw2', type: 'password', autocomplete: 'new-password' })),
+    ], async (form, close) => {
+      const a = form.querySelector('#f-pw1').value, b = form.querySelector('#f-pw2').value;
+      if (a.length < 6) return 'Servono almeno 6 caratteri.';
+      if (a !== b) return 'Le due password non coincidono.';
+      state.pw = await hash(a); markDirty(); close();
+      if (entering) enterAdmin(); else render();
+      toast('Password impostata. Premi "Salva e pubblica" per renderla attiva.');
+    }, 'Imposta password');
+  }
+  function changePassword() { createPassword('Cambia password', false); }
+
+  async function save() {
+    const artifact = await claude.use('artifact').catch(() => null);
+    if (!artifact) { toast('Salvataggio non disponibile qui. Apri la pagina dal tuo account.'); return; }
+    const css = (document.head.querySelector('style') || {}).textContent || '';
+    const json = JSON.stringify(state).replace(/</g, '\\u003c');
+    const body = pristine.replace(/(<script type="application\/json" id="data">)[\s\S]*?(<\/script>)/, (m, a, b) => a + json + b);
+    const html = '<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>' + css + '</style></head><body>' + body + '</body></html>';
+    try { await artifact.publish(html); dirty = false; toast('Pubblicato'); }
+    catch (e) {
+      const code = e && e.code;
+      toast(code === 'conflict' ? 'La pagina è cambiata altrove. Ricarico l\'ultima versione.' : (code === 'not_granted' || code === 'not_writer') ? 'Solo il proprietario della pagina può salvare.' : 'Salvataggio non riuscito. Riprova.');
+    }
+  }
+
+  $('open-admin').addEventListener('click', openLogin);
+  window.addEventListener('beforeunload', (e) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+  render();
+})();
+</script>

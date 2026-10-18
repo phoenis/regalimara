@@ -18,11 +18,16 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
   // Illustrazioni: metti i file nella cartella img/ e scrivi qui i percorsi.
   // intestazione: un'immagine accanto al titolo. segnaposto: una o più immagini per le idee senza foto (si alternano).
   const ILLUSTRAZIONI = { intestazione: '', segnaposto: [] }; // es. { intestazione: 'img/torta.png', segnaposto: ['img/regalo.png', 'img/fiori.png'] }
-  const state = { items: live ? [] : seed, reserved: new Map(), loading: live, error: false };
+  // In demo le prenotazioni restano solo in questo browser, per poter provare il funzionamento.
+  let demoRes = {};
+  try { demoRes = JSON.parse(localStorage.getItem('regali-demo') || '{}'); } catch (e) {}
+  const saveDemo = () => { try { localStorage.setItem('regali-demo', JSON.stringify(demoRes)); } catch (e) {} };
+  const state = { items: live ? [] : seed, reserved: new Map(live ? [] : Object.keys(demoRes).map((k) => [k, 'demo'])), loading: live, error: false };
   let filter = 'Tutte', admin = false;
-  const myUid = () => (auth && auth.currentUser ? auth.currentUser.uid : null);
+  const myUid = () => (live ? (auth.currentUser ? auth.currentUser.uid : null) : 'demo');
   const isMineRes = (id) => state.reserved.has(id) && state.reserved.get(id) === myUid();
 
+  if (!live) $('head').querySelector('.lede').after(el('p', { class: 'demo-note' }, 'Versione di prova: le idee sono di esempio e le prenotazioni restano solo su questo browser.'));
   if (ILLUSTRAZIONI.intestazione) {
     const hero = document.createElement('img');
     hero.className = 'hero'; hero.alt = ''; hero.src = ILLUSTRAZIONI.intestazione;
@@ -38,7 +43,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
   }
   const cats = () => [...new Set(state.items.map((i) => i.cat).filter(Boolean))];
   const safeUrl = (u) => /^https?:\/\//i.test(u || '') ? u : '';
-  const safeImg = (u) => /^https:\/\//i.test(u || '') ? u : '';
+  const safeImg = (u) => /^(https:\/\/|img\/[\w.-]+$)/i.test(u || '') ? u : '';
   const hostOf = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return ''; } };
   const isTaken = (it) => it.done || state.reserved.has(it.id);
   const MAX_IMGS = 4;
@@ -70,6 +75,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
   function reserveItem(it) {
     modal('Lo prendi tu?', [el('p', { class: 'note' }, '«' + it.title + '» comparirà come già preso per tutti. Non serve nome né account. Se cambi idea, potrai annullare da questo telefono o computer.')],
       async (form, close) => {
+        if (!live) { demoRes[it.id] = 1; saveDemo(); state.reserved.set(it.id, 'demo'); close(); render(); toast('Prenotato (in prova: resta solo su questo browser)'); return; }
         try {
           const uid = await ensureUid();
           await setDoc(doc(db, 'reservations', it.id), { uid, createdAt: Date.now() });
@@ -83,6 +89,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
   }
 
   async function releaseRes(it) {
+    if (!live) { delete demoRes[it.id]; saveDemo(); state.reserved.delete(it.id); render(); return; }
     try { await deleteDoc(doc(db, 'reservations', it.id)); } catch (e) { toast('Non sono riuscito ad annullare. Riprova.'); }
   }
 
@@ -102,7 +109,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     try {
       const batch = writeBatch(db);
       const now = Date.now();
-      seed.forEach((it, n) => { const { id, ...rest } = it; batch.set(doc(db, 'ideas', id), { ...rest, imgs: [], createdAt: now - n }); });
+      seed.forEach((it, n) => { const { id, ...rest } = it; batch.set(doc(db, 'ideas', id), { ...rest, imgs: [], link: '', createdAt: now - n }); });
       await batch.commit(); toast('Idee di esempio caricate');
     } catch (e) { toast('Non sono riuscito a caricarle.'); }
   }
@@ -168,7 +175,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     if (taken) info.appendChild(el('p', { class: 'taken' }, isMine ? 'Hai scelto tu questo regalo.' : 'Qualcuno ha già scelto questo regalo.'));
     if (url) info.appendChild(el('a', { class: 'btn ' + (taken ? '' : 'primary') + ' wide', href: url, target: '_blank', rel: 'noopener noreferrer' }, 'Dove comprarlo: ' + (hostOf(url) || 'vai al sito') + ' ↗'));
     else info.appendChild(el('p', { class: 'hint-d' }, 'Per questa idea non c\'è un link: le foto servono a dare un\'idea.'));
-    if (!taken) info.appendChild(el('button', { class: 'btn ' + (url ? '' : 'primary') + ' wide', type: 'button', onclick: () => { close(); if (live) reserveItem(it); else toast('La prenotazione non è ancora attiva su questa copia.'); } }, 'Lo prendo io'));
+    if (!taken) info.appendChild(el('button', { class: 'btn ' + (url ? '' : 'primary') + ' wide', type: 'button', onclick: () => { close(); reserveItem(it); } }, 'Lo prendo io'));
     else if (isMine) info.appendChild(el('button', { class: 'btn quiet wide', type: 'button', onclick: () => { close(); releaseRes(it); } }, 'Annulla, non lo prendo più'));
     const closeBtn = el('button', { class: 'x', type: 'button', 'aria-label': 'Chiudi', onclick: close }, '×');
     const sheet = el('div', { class: 'detail', role: 'dialog', 'aria-modal': 'true', 'aria-label': it.title }, mediaOf(it, true), info);
@@ -200,7 +207,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
       if (it.note) body.appendChild(el('p', { class: 'note' }, it.note));
       if (it.price) body.appendChild(el('div', { class: 'price' }, it.price));
       body.appendChild(el('button', { class: 'link-btn', type: 'button', onclick: () => openDetail(it) }, 'Vedi dettagli →'));
-      if (!taken) body.appendChild(el('button', { class: 'btn primary reserve', type: 'button', onclick: () => live ? reserveItem(it) : toast('La prenotazione non è ancora attiva su questa copia.') }, 'Lo prendo io'));
+      if (!taken) body.appendChild(el('button', { class: 'btn primary reserve', type: 'button', onclick: () => reserveItem(it) }, 'Lo prendo io'));
       else if (isMine) body.appendChild(el('button', { class: 'btn quiet reserve', type: 'button', onclick: () => releaseRes(it) }, 'Annulla, non lo prendo più'));
       if (admin) body.appendChild(el('div', { class: 'row-actions' },
         el('button', { class: 'btn', type: 'button', onclick: () => editItem(it) }, 'Modifica'),

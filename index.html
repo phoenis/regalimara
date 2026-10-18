@@ -117,6 +117,8 @@ footer { margin-top: 56px; display: flex; flex-wrap: wrap; gap: 12px; align-item
 .detail .hint-d { margin: 0; color: var(--muted); font-size: 16px; }
 .btn.wide { width: 100%; text-align: center; text-decoration: none; display: block; }
 .x { position: absolute; top: 10px; right: 10px; z-index: 5; width: 44px; height: 44px; border: 0; border-radius: 50%; background: rgba(255,255,255,.95); color: var(--fg); font-size: 28px; line-height: 1; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.25); }
+
+.demo-note { display: inline-block; margin: 14px 0 0; padding: 6px 14px; border-radius: 999px; background: var(--tint); color: var(--muted); font-weight: 700; font-size: 15px; }
 @media (prefers-reduced-motion: no-preference) { .card { transition: transform .15s, box-shadow .15s; } }
 @media (hover: hover) and (prefers-reduced-motion: no-preference) { .card:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(42,37,48,.12); } }
 @media (max-width: 780px) {
@@ -174,15 +176,15 @@ footer { margin-top: 56px; display: flex; flex-wrap: wrap; gap: 12px; align-item
 
 <!-- Idee di esempio: si vedono solo finché config.js non è compilato (modalità demo, sola lettura). -->
 <script type="application/json" id="data">{"items":[
-{"id":"i1","title":"Corso di cucina in due","note":"Una serata a impastare, tagliare e assaggiare insieme, con uno chef che spiega tutto passo per passo.","cat":"Esperienze","price":"80–120 €","link":"","done":false},
-{"id":"i2","title":"Set di tè e infusi artigianali","note":"Sei miscele in barattolini di latta, con un colino a forma di fiore. Da bere sul divano.","cat":"Cucina","price":"25–35 €","link":"","done":false},
-{"id":"i3","title":"Un limone in vaso","note":"Un alberello vero per il balcone, con terriccio e istruzioni per farlo fiorire.","cat":"Casa","price":"20–40 €","link":"","done":false},
-{"id":"i4","title":"Libro di ricette illustrato","note":"Uno di quelli grandi, con le foto, da sfogliare anche senza cucinare niente.","cat":"Libri","price":"20–30 €","link":"","done":false},
-{"id":"i5","title":"Cena a sorpresa","note":"Un tavolo prenotato in un posto nuovo. Il nome si scopre solo all'ingresso.","cat":"Esperienze","price":"60–100 €","link":"","done":false},
-{"id":"i6","title":"Plaid in lana morbidissimo","note":"Grande abbastanza per due, in un colore caldo. Per le sere d'autunno.","cat":"Casa","price":"40–60 €","link":"","done":false},
-{"id":"i7","title":"Giornata alle terme","note":"Ingresso per un pomeriggio di acqua calda e niente da fare.","cat":"Benessere","price":"50–90 €","link":"","done":false},
-{"id":"i8","title":"Candela profumata fatta a mano","note":"Cera di soia, profumo di fico e cedro, nel vasetto di vetro che poi si riusa.","cat":"Casa","price":"15–25 €","link":"","done":false},
-{"id":"i9","title":"Kit per fare il pane","note":"Lievito madre, cestino per la lievitazione e lama per incidere. La domenica profuma.","cat":"Cucina","price":"30–45 €","link":"","done":false}
+{"id":"i1","title":"Corso di cucina in due","note":"Una serata a impastare, tagliare e assaggiare insieme, con uno chef che spiega tutto passo per passo.","cat":"Esperienze","price":"80–120 €","done":false},
+{"id":"i2","title":"Set di tè e infusi artigianali","note":"Sei miscele in barattolini di latta, con un colino a forma di fiore. Da bere sul divano.","cat":"Cucina","price":"25–35 €","done":false,"imgs":["img/demo-te.svg"],"link":""},
+{"id":"i3","title":"Un limone in vaso","note":"Un alberello vero per il balcone, con terriccio e istruzioni per farlo fiorire.","cat":"Casa","price":"20–40 €","done":false,"imgs":["img/demo-limone.svg"],"link":""},
+{"id":"i4","title":"Libro di ricette illustrato","note":"Uno di quelli grandi, con le foto, da sfogliare anche senza cucinare niente.","cat":"Libri","price":"20–30 €","done":false},
+{"id":"i5","title":"Cena a sorpresa","note":"Un tavolo prenotato in un posto nuovo. Il nome si scopre solo all'ingresso.","cat":"Esperienze","price":"60–100 €","done":false},
+{"id":"i6","title":"Plaid in lana morbidissimo","note":"Grande abbastanza per due, in un colore caldo. Per le sere d'autunno.","cat":"Casa","price":"40–60 €","done":false,"imgs":["img/demo-plaid.svg", "img/demo-plaid-dettaglio.svg"],"link":"https://www.amazon.it/"},
+{"id":"i7","title":"Giornata alle terme","note":"Ingresso per un pomeriggio di acqua calda e niente da fare.","cat":"Benessere","price":"50–90 €","done":false},
+{"id":"i8","title":"Candela profumata fatta a mano","note":"Cera di soia, profumo di fico e cedro, nel vasetto di vetro che poi si riusa.","cat":"Casa","price":"15–25 €","done":false,"imgs":["img/demo-candela.svg"],"link":""},
+{"id":"i9","title":"Kit per fare il pane","note":"Lievito madre, cestino per la lievitazione e lama per incidere. La domenica profuma.","cat":"Cucina","price":"30–45 €","done":false}
 ]}</script>
 
 <script src="config.js"></script>

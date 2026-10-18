@@ -1,15 +1,19 @@
-(function () {
-  const cfg = window.REGALI_CONFIG || {};
-  const sb = cfg.url && cfg.anonKey && window.supabase ? window.supabase.createClient(cfg.url, cfg.anonKey) : null;
-  const seed = JSON.parse(document.getElementById('data').textContent).items;
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import { getAuth, onAuthStateChanged, signInAnonymously, signInWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+import { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc, writeBatch, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+{
+  const fb = (window.REGALI_CONFIG || {}).firebase || {};
+  const live = !!fb.apiKey;
+  const app = live ? initializeApp(fb) : null;
+  const auth = live ? getAuth(app) : null;
+  const db = live ? getFirestore(app) : null;
   const $ = (id) => document.getElementById(id);
   const bands = ['var(--c1)', 'var(--c2)', 'var(--c3)', 'var(--c4)', 'var(--c5)'];
-  const state = { items: sb ? [] : seed, reserved: new Set(), loading: !!sb, error: false };
+  const state = { items: live ? [] : seed, reserved: new Map(), loading: live, error: false };
   let filter = 'Tutte', admin = false;
-  // Le prenotazioni fatte da questo dispositivo: idea -> codice segreto per annullarle.
-  let mine = {};
-  try { mine = JSON.parse(localStorage.getItem('regali-mine') || '{}'); } catch (e) {}
-  const saveMine = () => { try { localStorage.setItem('regali-mine', JSON.stringify(mine)); } catch (e) {} };
+  const myUid = () => (auth && auth.currentUser ? auth.currentUser.uid : null);
+  const isMineRes = (id) => state.reserved.has(id) && state.reserved.get(id) === myUid();
 
   for (let i = 0; i < 40; i++) $('bunting').appendChild(document.createElement('i'));
 
@@ -26,6 +30,7 @@
   const hostOf = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return ''; } };
   const isTaken = (it) => it.done || state.reserved.has(it.id);
   const MAX_IMGS = 4;
+  const norm = (d) => ({ ...d, imgs: Array.isArray(d.imgs) ? d.imgs : [] });
 
   function toast(text) {
     const t = el('div', { class: 'toast', role: 'status' }, text);
@@ -33,61 +38,61 @@
   }
 
   // ---------- dati ----------
-  async function load() {
-    if (!sb) return;
-    const [ideas, reserved] = await Promise.all([
-      sb.from('ideas').select('*').order('created_at', { ascending: false }),
-      sb.from('reserved').select('idea_id'),
-    ]);
-    state.loading = false;
-    if (ideas.error) state.error = true;
-    else { state.error = false; state.items = ideas.data.map((r) => ({ ...r, imgs: Array.isArray(r.imgs) ? r.imgs : [] })); }
-    if (!reserved.error) {
-      state.reserved = new Set(reserved.data.map((r) => r.idea_id));
-      for (const k in mine) if (!state.reserved.has(k)) delete mine[k];
-      saveMine();
-    }
-    render();
+  function listen() {
+    if (!live) return;
+    onSnapshot(query(collection(db, 'ideas'), orderBy('createdAt', 'desc')), (snap) => {
+      state.loading = false; state.error = false;
+      state.items = snap.docs.map((d) => norm({ id: d.id, ...d.data() }));
+      render();
+    }, () => { state.loading = false; state.error = true; render(); });
+    onSnapshot(collection(db, 'reservations'), (snap) => {
+      state.reserved = new Map(snap.docs.map((d) => [d.id, d.data().uid]));
+      render();
+    });
+  }
+  async function ensureUid() {
+    if (auth.currentUser) return auth.currentUser.uid;
+    return (await signInAnonymously(auth)).user.uid;
   }
 
-  async function reserveItem(it) {
+  function reserveItem(it) {
     modal('Lo prendi tu?', [el('p', { class: 'note' }, '«' + it.title + '» comparirà come già preso per tutti. Non serve nome né account. Se cambi idea, potrai annullare da questo telefono o computer.')],
       async (form, close) => {
-        const id = crypto.randomUUID();
-        const { error } = await sb.from('reservations').insert({ id, idea_id: it.id });
-        if (error) {
+        try {
+          const uid = await ensureUid();
+          await setDoc(doc(db, 'reservations', it.id), { uid, createdAt: Date.now() });
+        } catch (e) {
           close();
-          toast(error.code === '23505' ? 'Ops, qualcuno l\'ha appena preso.' : 'Non sono riuscito a prenotare. Riprova.');
-          await load(); return;
+          toast(e && e.code === 'permission-denied' ? 'Ops, qualcuno l\'ha appena preso.' : 'Non sono riuscito a prenotare. Riprova.');
+          return;
         }
-        mine[it.id] = id; saveMine(); state.reserved.add(it.id);
-        close(); render(); toast('Perfetto, è tuo!');
+        close(); toast('Perfetto, è tuo!');
       }, 'Sì, lo prendo io');
   }
 
-  async function releaseMine(it) {
-    const { error } = await sb.rpc('release_reservation', { rid: mine[it.id] });
-    if (error) { toast('Non sono riuscito ad annullare. Riprova.'); return; }
-    delete mine[it.id]; saveMine(); state.reserved.delete(it.id); render();
-  }
-
-  async function adminRelease(it) {
-    const { error } = await sb.from('reservations').delete().eq('idea_id', it.id);
-    if (error) { toast('Non sono riuscito a liberarlo.'); return; }
-    state.reserved.delete(it.id); render();
+  async function releaseRes(it) {
+    try { await deleteDoc(doc(db, 'reservations', it.id)); } catch (e) { toast('Non sono riuscito ad annullare. Riprova.'); }
   }
 
   async function toggleDone(it) {
-    const { error } = await sb.from('ideas').update({ done: !it.done }).eq('id', it.id);
-    if (error) { toast('Salvataggio non riuscito.'); return; }
-    it.done = !it.done; render();
+    try { await updateDoc(doc(db, 'ideas', it.id), { done: !it.done }); } catch (e) { toast('Salvataggio non riuscito.'); }
   }
 
   async function deleteItem(it) {
     if (!confirm('Eliminare «' + it.title + '»?')) return;
-    const { error } = await sb.from('ideas').delete().eq('id', it.id);
-    if (error) { toast('Non sono riuscito a eliminarla.'); return; }
-    state.items = state.items.filter((x) => x.id !== it.id); render();
+    try {
+      if (state.reserved.has(it.id)) await deleteDoc(doc(db, 'reservations', it.id));
+      await deleteDoc(doc(db, 'ideas', it.id));
+    } catch (e) { toast('Non sono riuscito a eliminarla.'); }
+  }
+
+  async function importSeed() {
+    try {
+      const batch = writeBatch(db);
+      const now = Date.now();
+      seed.forEach((it, n) => { const { id, ...rest } = it; batch.set(doc(db, 'ideas', id), { ...rest, imgs: [], createdAt: now - n }); });
+      await batch.commit(); toast('Idee di esempio caricate');
+    } catch (e) { toast('Non sono riuscito a caricarle.'); }
   }
 
   // ---------- schede ----------
@@ -126,7 +131,7 @@
     else if (state.error) grid.appendChild(el('div', { class: 'empty' }, 'Non riesco a caricare le idee. Riprova tra poco.'));
     else if (!list.length) grid.appendChild(el('div', { class: 'empty' }, admin ? 'Nessuna idea qui. Premi "Nuova idea" per aggiungerne una.' : 'Nessuna idea in questa categoria, per ora.'));
     list.forEach((it) => {
-      const taken = isTaken(it), isMine = state.reserved.has(it.id) && !!mine[it.id];
+      const taken = isTaken(it), isMine = isMineRes(it.id);
       const card = el('article', { class: 'card' + (taken ? ' done' : ''), style: '--band:' + bandOf(it.cat) });
       if (taken) card.appendChild(el('div', { class: 'stamp' }, isMine ? 'Lo prendi tu' : 'Già preso'));
       const media = mediaOf(it); media.prepend(el('span', { class: 'tag' }, it.cat || 'Varie')); card.appendChild(media);
@@ -135,12 +140,12 @@
       if (it.price) body.appendChild(el('div', { class: 'price' }, it.price));
       const url = safeUrl(it.link);
       if (url) body.appendChild(el('a', { class: 'link', href: url, target: '_blank', rel: 'noopener noreferrer' }, 'Guarda su ' + (hostOf(url) || 'il sito') + ' ↗'));
-      if (!taken) body.appendChild(el('button', { class: 'btn primary reserve', type: 'button', onclick: () => sb ? reserveItem(it) : toast('La prenotazione non è ancora attiva su questa copia.') }, 'Lo prendo io'));
-      else if (isMine) body.appendChild(el('button', { class: 'btn quiet reserve', type: 'button', onclick: () => releaseMine(it) }, 'Annulla, non lo prendo più'));
+      if (!taken) body.appendChild(el('button', { class: 'btn primary reserve', type: 'button', onclick: () => live ? reserveItem(it) : toast('La prenotazione non è ancora attiva su questa copia.') }, 'Lo prendo io'));
+      else if (isMine) body.appendChild(el('button', { class: 'btn quiet reserve', type: 'button', onclick: () => releaseRes(it) }, 'Annulla, non lo prendo più'));
       if (admin) body.appendChild(el('div', { class: 'row-actions' },
         el('button', { class: 'btn', type: 'button', onclick: () => editItem(it) }, 'Modifica'),
         state.reserved.has(it.id)
-          ? el('button', { class: 'btn', type: 'button', onclick: () => adminRelease(it) }, 'Libera prenotazione')
+          ? el('button', { class: 'btn', type: 'button', onclick: () => releaseRes(it) }, 'Libera prenotazione')
           : el('button', { class: 'btn', type: 'button', onclick: () => toggleDone(it) }, it.done ? 'Rimetti in lista' : 'Segna come preso'),
         el('button', { class: 'btn danger', type: 'button', onclick: () => deleteItem(it) }, 'Elimina')));
       card.appendChild(body); grid.appendChild(card);
@@ -152,12 +157,13 @@
 
   function renderAdminBar() {
     const bar = $('adminbar'); bar.hidden = !admin; bar.className = admin ? 'admin-bar' : ''; bar.replaceChildren();
-    $('open-admin').hidden = admin || !sb;
+    $('open-admin').hidden = admin || !live;
     if (!admin) return;
     bar.append(
       el('strong', null, 'Gestione attiva: le modifiche si salvano subito'),
       el('button', { class: 'btn', type: 'button', onclick: () => editItem(null) }, 'Nuova idea'),
-      el('button', { class: 'btn', type: 'button', onclick: () => sb.auth.signOut() }, 'Esci'));
+      !state.items.length && !state.loading ? el('button', { class: 'btn', type: 'button', onclick: importSeed }, 'Carica le idee di esempio') : null,
+      el('button', { class: 'btn', type: 'button', onclick: () => signOut(auth) }, 'Esci'));
   }
 
   // ---------- finestre ----------
@@ -178,33 +184,6 @@
   }
   const field = (id, label, extra) => [el('label', { for: id }, label), extra];
 
-  function fileToBlob(file) {
-    return new Promise((resolve, reject) => {
-      const fr = new FileReader();
-      fr.onerror = reject;
-      fr.onload = () => {
-        const im = new Image();
-        im.onerror = reject;
-        im.onload = () => {
-          const s = Math.min(1, 1200 / Math.max(im.width, im.height));
-          const c = document.createElement('canvas');
-          c.width = Math.round(im.width * s); c.height = Math.round(im.height * s);
-          c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
-          c.toBlob((b) => (b ? resolve(b) : reject(new Error('blob'))), 'image/jpeg', 0.8);
-        };
-        im.src = fr.result;
-      };
-      fr.readAsDataURL(file);
-    });
-  }
-  async function uploadPhoto(file, ideaId) {
-    const blob = await fileToBlob(file);
-    const path = ideaId + '/' + Date.now() + '-' + Math.random().toString(36).slice(2, 6) + '.jpg';
-    const { error } = await sb.storage.from('foto').upload(path, blob, { contentType: 'image/jpeg' });
-    if (error) throw error;
-    return sb.storage.from('foto').getPublicUrl(path).data.publicUrl;
-  }
-
   function editItem(it) {
     const isNew = !it;
     const data = it || { id: 'i' + Date.now().toString(36), title: '', note: '', cat: filter !== 'Tutte' ? filter : '', price: '', link: '', imgs: [], done: false };
@@ -218,20 +197,12 @@
         el('button', { type: 'button', 'aria-label': 'Rimuovi foto', onclick: () => { imgs.splice(n, 1); drawImgs(); } }, '×'))));
       imgMsg.textContent = imgs.length + ' di ' + MAX_IMGS + ' foto. La prima è quella grande sulla scheda.';
     }
-    const fileIn = el('input', { id: 'f-file', type: 'file', accept: 'image/*', multiple: '' });
-    fileIn.addEventListener('change', async () => {
-      for (const f of [...fileIn.files]) {
-        if (imgs.length >= MAX_IMGS) { toast('Massimo ' + MAX_IMGS + ' foto per idea'); break; }
-        imgMsg.textContent = 'Carico ' + f.name + '…';
-        try { imgs.push(await uploadPhoto(f, data.id)); } catch (e) { toast('Non riesco a caricare ' + f.name); }
-      }
-      fileIn.value = ''; drawImgs();
-    });
     const urlIn = el('input', { id: 'f-imgurl', type: 'url', placeholder: 'https://… indirizzo di un\'immagine' });
     const addUrl = () => {
       const u = urlIn.value.trim();
       if (!u) return;
       if (!/^https:\/\//i.test(u)) { toast('L\'indirizzo deve iniziare con https://'); return; }
+      if (/(^|\.)pinterest\.[a-z.]+\/pin\//i.test(u.replace(/^https:\/\//i, ''))) { toast('Questo è il link della scheda, non della foto. Tieni premuto sulla foto e scegli "Copia indirizzo immagine".'); return; }
       if (imgs.length >= MAX_IMGS) { toast('Massimo ' + MAX_IMGS + ' foto per idea'); return; }
       imgs.push(u); urlIn.value = ''; drawImgs();
     };
@@ -243,20 +214,17 @@
       ...field('f-cat', 'Categoria', el('input', { id: 'f-cat', type: 'text', value: data.cat, list: 'f-cats', maxlength: '24' })), dl,
       ...field('f-price', 'Prezzo indicativo', el('input', { id: 'f-price', type: 'text', value: data.price, maxlength: '24' })),
       ...field('f-link', 'Link dove comprarlo (facoltativo)', el('input', { id: 'f-link', type: 'url', value: data.link, placeholder: 'https://' })),
-      ...field('f-file', 'Foto', fileIn), imgBox,
+      el('label', null, 'Foto (da link)'), imgBox,
       el('div', { class: 'inline' }, urlIn, el('button', { class: 'btn', type: 'button', onclick: addUrl }, 'Aggiungi')),
       imgMsg,
-      el('p', { class: 'hint' }, 'Su Amazon o altri negozi: tieni premuto sulla foto del prodotto, scegli "Copia indirizzo immagine" e incollalo qui. Oppure carica uno screenshot.'),
+      el('p', { class: 'hint' }, 'Da Pinterest, Amazon o altri siti: tieni premuto sulla foto (sul computer, tasto destro), scegli "Copia indirizzo immagine" e incollalo qui. Deve essere l\'indirizzo della foto, non della pagina.'),
     ], async (form, close) => {
       const v = (id) => form.querySelector('#' + id).value.trim();
       if (!v('f-title')) return 'Scrivi almeno il titolo.';
       if (v('f-link') && !safeUrl(v('f-link'))) return 'Il link deve iniziare con http:// o https://';
-      const row = { id: data.id, title: v('f-title'), note: v('f-note'), cat: v('f-cat'), price: v('f-price'), link: v('f-link'), imgs: imgs.slice(), done: !!data.done };
-      const { error } = await sb.from('ideas').upsert(row);
-      if (error) return 'Salvataggio non riuscito: ' + error.message;
-      const i = state.items.findIndex((x) => x.id === row.id);
-      if (i >= 0) state.items[i] = { ...state.items[i], ...row }; else state.items.unshift(row);
-      close(); render();
+      const { id, ...row } = { id: data.id, title: v('f-title'), note: v('f-note'), cat: v('f-cat'), price: v('f-price'), link: v('f-link'), imgs: imgs.slice(), done: !!data.done, createdAt: data.createdAt || Date.now() };
+      try { await setDoc(doc(db, 'ideas', id), row); } catch (e) { return 'Salvataggio non riuscito. Sei ancora dentro?'; }
+      close();
     }, 'Salva idea');
   }
 
@@ -265,17 +233,20 @@
       ...field('f-mail', 'Email', el('input', { id: 'f-mail', type: 'email', autocomplete: 'username' })),
       ...field('f-pw', 'Password', el('input', { id: 'f-pw', type: 'password', autocomplete: 'current-password' })),
     ], async (form, close) => {
-      const { error } = await sb.auth.signInWithPassword({ email: form.querySelector('#f-mail').value.trim(), password: form.querySelector('#f-pw').value });
-      if (error) return 'Email o password non corrette.';
+      try { await signInWithEmailAndPassword(auth, form.querySelector('#f-mail').value.trim(), form.querySelector('#f-pw').value); }
+      catch (e) { return 'Email o password non corrette.'; }
       close();
     }, 'Entra');
   }
 
   $('open-admin').addEventListener('click', openLogin);
-  if (sb) {
-    sb.auth.onAuthStateChange((event, session) => { const now = !!session; if (now !== admin) { admin = now; render(); } });
-    sb.auth.getSession().then(({ data }) => { if (data && data.session && !admin) { admin = true; render(); } });
+  if (live) {
+    onAuthStateChanged(auth, (u) => {
+      admin = !!u && !u.isAnonymous;
+      render();
+      if (!u) signInAnonymously(auth).catch(() => {});
+    });
   }
   render();
-  load();
-})();
+  listen();
+}

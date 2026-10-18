@@ -1,0 +1,28 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Sostituisci con l'email dell'utente che crei in Authentication: è l'unica che può gestire la pagina.
+    function isOwner() {
+      return request.auth != null && request.auth.token.email == 'TUA-EMAIL@esempio.it';
+    }
+
+    // Idee: le legge chiunque, le gestisce solo il proprietario.
+    match /ideas/{ideaId} {
+      allow read: if true;
+      allow write: if isOwner();
+    }
+
+    // Prenotazioni: una per idea (l'id del documento è l'id dell'idea).
+    // Chiunque abbia un accesso anonimo può crearla, ma solo se non esiste già;
+    // la può annullare solo chi l'ha creata (stesso uid) o il proprietario.
+    match /reservations/{ideaId} {
+      allow read: if true;
+      allow create: if request.auth != null
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['uid', 'createdAt'])
+        && exists(/databases/$(database)/documents/ideas/$(ideaId));
+      allow delete: if isOwner() || (request.auth != null && resource.data.uid == request.auth.uid);
+    }
+  }
+}

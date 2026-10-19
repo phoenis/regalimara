@@ -4,7 +4,7 @@
 2. **Build > Firestore Database > Crea database** (modalità produzione, regione europea).
 3. **Build > Authentication > Metodo di accesso**: attiva **Email/password** e **Anonimo**.
 4. **Authentication > Utenti > Aggiungi utente**: crea il tuo utente (email e password). Con questi dati entri da "Area riservata".
-5. **Firestore > Regole**: incolla `firestore.rules`, sostituisci `TUA-EMAIL@esempio.it` con l'email del punto 4 e premi Pubblica.
+5. **Firestore > Regole**: incolla `firestore.rules`, sostituisci `IL-TUO-UID` con l'UID dell'utente del punto 4 (**Authentication > Utenti > colonna "UID utente"**) e premi Pubblica. Fallo solo nella console, non committare l'UID reale nel repo se preferisci tenerlo privato.
 6. **Impostazioni progetto > Le tue app > aggiungi app Web**: copia i valori di `firebaseConfig` in `config.js` e committa.
 7. **Authentication > Impostazioni > Domini autorizzati**: aggiungi il dominio di GitHub Pages (`tuonome.github.io`).
 8. **GitHub > Settings > Pages**: pubblica dal branch scelto, cartella root.
@@ -15,3 +15,4 @@ Note:
 - Chiunque ha il link può prenotare qualsiasi idea. Dall'area riservata puoi liberare una prenotazione.
 - Foto: in "Nuova idea" incolla l'indirizzo dell'immagine (su Pinterest "Copia indirizzo immagine", di solito `i.pinimg.com`). Se la scheda originale viene rimossa, la foto può sparire.
 - Se `config.js` è vuoto la pagina è in modalità prova: nessuna idea e prenotazioni solo locali.
+- I valori di `config.js` sono pubblici per progettazione (identificano il progetto, non danno accesso). Per sicurezza in più, in Google Cloud Console > API e servizi > Credenziali limita la chiave API ai referrer `https://phoenis.github.io/*`.

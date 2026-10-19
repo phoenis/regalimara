@@ -2,9 +2,10 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Sostituisci con l'email dell'utente che crei in Authentication: è l'unica che può gestire la pagina.
+    // Sostituisci IL-TUO-UID con l'UID del tuo utente (Authentication > Utenti > colonna "UID utente").
+    // Usiamo l'UID e non l'email perché questo file è pubblico nel repo e non deve mostrare dati personali.
     function isOwner() {
-      return request.auth != null && request.auth.token.email == 'TUA-EMAIL@esempio.it';
+      return request.auth != null && request.auth.uid == 'IL-TUO-UID';
     }
 
     // Idee: le legge chiunque, le gestisce solo il proprietario.

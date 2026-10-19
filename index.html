@@ -388,9 +388,10 @@ button.fab.top { background: var(--free-soft); }
 .gcount { right: 0.75rem; bottom: 0.75rem; }
 .buybox { background: var(--card); border-radius: var(--r-lg); box-shadow: var(--sh-card); margin-top: 1rem; padding: 1.25rem 1.25rem 1.375rem; display: flex; flex-direction: column; gap: 1rem; }
 .buybox h2 { font-family: var(--body); font-weight: 800; font-size: 1.0625rem; letter-spacing: 0; margin: 0; }
-.dinfo .cat-chips { gap: 0 0.5rem; }
-.dinfo .chip-cat { font-size: 0.875rem; font-weight: 400; padding: 0; border: 0; background: none; border-radius: 0; color: var(--ink-2); }
-.dinfo .chip-cat + .chip-cat::before { content: "· "; }
+.dinfo { --pill-x: 0.75rem; }
+.dinfo .cat-chips { gap: 0.375rem; }
+.dinfo .chip-cat { font-size: 0.875rem; font-weight: 400; padding: 0.1875rem var(--pill-x); }
+.dinfo .dtitle, .dinfo .sec, .dinfo .full { padding-left: calc(var(--pill-x) + 1px); }
 </style>
 </head>
 <body>
@@ -411,7 +412,7 @@ button.fab.top { background: var(--free-soft); }
 <!-- Idee mostrate solo finché config.js non è compilato (modalità prova). Con Firebase le idee vivono nel database. -->
 <script type="application/json" id="data">{"items":[]}</script>
 
-<script src="config.js?v=202610191334"></script>
-<script type="module" src="app.js?v=202610191334"></script>
+<script src="config.js?v=202610191336"></script>
+<script type="module" src="app.js?v=202610191336"></script>
 </body>
 </html>

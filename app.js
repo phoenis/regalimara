@@ -330,9 +330,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
       info.appendChild(el('p', { class: 'hint-d' }, 'Per questa idea non c\'è un link: le foto servono a dare un\'idea.'));
     }
 
-    if (!taken) info.appendChild(el('p', { class: 'note-s' }, opts.length > 1
-      ? 'Prenoti l\'idea intera: vale per tutte e ' + opts.length + ' le opzioni. Poi compri quella che preferisci.'
-      : 'Gli altri lo vedranno come già preso. Se cambi idea puoi annullare da questo stesso telefono.'));
+    if (!taken && opts.length <= 1) info.appendChild(el('p', { class: 'note-s' }, 'Gli altri lo vedranno come già preso. Se cambi idea puoi annullare da questo stesso telefono.'));
     const bbAction = !taken
       ? el('button', { class: 'btn primary', type: 'button', onclick: () => reserveItem(it) }, heartIcon(), 'Lo prendo io')
       : mine

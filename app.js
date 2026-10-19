@@ -305,7 +305,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     if (it.note) info.append(el('h3', { class: 'sec' }, 'Dettagli'), el('p', { class: 'full' }, it.note));
 
     if (opts.length > 1) {
-      info.appendChild(el('div', { class: 'notice' }, heartIcon(), el('p', null, el('strong', null, 'Ne basta uno. '), 'Vanno bene tutte e ' + opts.length + ' le opzioni: scegli quello che preferisci.')));
+      info.appendChild(el('div', { class: 'notice' }, heartIcon(), el('p', null, el('strong', null, 'Ne basta una. '), 'Vanno bene tutte e ' + opts.length + ' le opzioni: scegli quella che preferisci.')));
       const list = el('div', { class: 'opts' }, el('h2', null, opts.length + ' opzioni'));
       opts.forEach((o, n) => {
         const ourl = safeUrl(o.link), ofotos = o.imgs.map(safeImg).filter(Boolean), oimg = ofotos.includes(safeImg(it.cover)) ? safeImg(it.cover) : ofotos[0];
@@ -331,7 +331,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     }
 
     if (!taken) info.appendChild(el('p', { class: 'note-s' }, opts.length > 1
-      ? 'Prenoti l\'idea intera: vale per tutte e ' + opts.length + ' le opzioni. Poi compri quello che preferisci.'
+      ? 'Prenoti l\'idea intera: vale per tutte e ' + opts.length + ' le opzioni. Poi compri quella che preferisci.'
       : 'Gli altri lo vedranno come già preso. Se cambi idea puoi annullare da questo stesso telefono.'));
     const bbAction = !taken
       ? el('button', { class: 'btn primary', type: 'button', onclick: () => reserveItem(it) }, heartIcon(), 'Lo prendo io')

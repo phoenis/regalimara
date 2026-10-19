@@ -182,13 +182,16 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     }
     document.title = it.title + ' · Idee regalo per Mara';
     if (galFor !== id) { galFor = id; galIdx = 0; }
-    const imgs = imgsOf(it);
+    const vars = (it.variants || []).filter((v) => v.label || safeUrl(v.link) || safeImg(v.img));
+    // Con più stili non c'è una foto principale: ogni stile ha la sua, tutte uguali.
+    const imgs = vars.length ? (it.imgs || []).map(safeImg).filter(Boolean) : imgsOf(it);
     if (galIdx >= imgs.length) galIdx = 0;
     const taken = isTaken(it), isMine = isMineRes(it.id);
     const url = safeUrl(it.link);
 
     const main = mediaOf({ ...it, variants: [], imgs: imgs.length ? [imgs[galIdx]] : [] });
     const gallery = el('div', { class: 'gallery' }, main);
+    const showGallery = !vars.length || imgs.length > 0;
     const go = (d) => { galIdx = (galIdx + d + imgs.length) % imgs.length; render(); };
     if (imgs.length > 1) {
       main.classList.add('swipe');
@@ -208,22 +211,20 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     info.append(el('span', { class: 'cat' }, catOf(it)), el('h1', { class: 'dtitle' }, it.title));
     if (it.price) info.appendChild(el('div', { class: 'price' }, it.price));
     if (it.note) info.appendChild(el('p', { class: 'full' }, it.note));
-    const vars = (it.variants || []).filter((v) => v.label || safeUrl(v.link));
     if (vars.length) {
-      const list = el('div', { class: 'variants' }, el('h2', null, vars.length > 1 ? 'Scegli lo stile che preferisci' : 'Dove trovarlo'));
+      const grid = el('div', { class: 'vgrid' });
       vars.forEach((v) => {
-        const vi = imgs.indexOf(safeImg(v.img));
-        const thumb = safeImg(v.img)
-          ? el('button', { class: 'vthumb', type: 'button', 'aria-label': 'Mostra la foto: ' + (v.label || 'stile'), onclick: () => { if (vi >= 0) { galIdx = vi; render(); } } }, el('img', { src: safeImg(v.img), alt: '', referrerpolicy: 'no-referrer' }))
-          : el('div', { class: 'vthumb' }, giftIcon());
-        const vurl = safeUrl(v.link);
-        list.appendChild(el('div', { class: 'variant' }, thumb,
-          el('div', { class: 'vtext' },
-            el('div', { class: 'vname' }, v.label || 'Stile', v.fav ? el('span', { class: 'fav' }, 'Il mio preferito') : null),
-            v.price ? el('div', { class: 'vprice' }, v.price) : null,
-            vurl ? el('a', { class: 'btn vlink', href: vurl, target: '_blank', rel: 'noopener noreferrer' }, 'Vedi su ' + (hostOf(vurl) || 'il sito') + ' ↗') : null)));
+        const vurl = safeUrl(v.link), vimg = safeImg(v.img);
+        const img = vimg ? el('img', { src: vimg, alt: v.label || '', loading: 'lazy', referrerpolicy: 'no-referrer' }) : giftIcon();
+        if (vimg) img.addEventListener('error', () => img.replaceWith(giftIcon()));
+        const pic = el('div', { class: 'vimg' }, img);
+        grid.appendChild(el('div', { class: 'vtile' },
+          vurl ? el('a', { class: 'vpic', href: vurl, target: '_blank', rel: 'noopener noreferrer', 'aria-label': 'Apri ' + (v.label || 'lo stile') }, pic) : pic,
+          el('div', { class: 'vname' }, v.label || 'Stile'),
+          v.price ? el('div', { class: 'vprice' }, v.price) : null,
+          vurl ? el('a', { class: 'btn vlink', href: vurl, target: '_blank', rel: 'noopener noreferrer', 'aria-label': 'Vedi su ' + (hostOf(vurl) || 'il sito') }, (hostOf(vurl) || 'Vedi') + ' ↗') : null));
       });
-      info.appendChild(list);
+      info.appendChild(el('div', { class: 'variants' }, el('h2', null, vars.length > 1 ? 'Scegli lo stile che preferisci' : 'Dove trovarlo'), grid));
     }
     if (taken) info.appendChild(el('p', { class: 'taken' }, isMine ? 'Hai scelto tu questo regalo.' : 'Qualcuno ha già scelto questo regalo.'));
     if (url) info.appendChild(el('a', { class: 'btn ' + (taken ? '' : 'primary') + ' wide', href: url, target: '_blank', rel: 'noopener noreferrer' }, 'Dove comprarlo: ' + (hostOf(url) || 'vai al sito') + ' ↗'));
@@ -231,7 +232,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     if (!taken) info.appendChild(el('button', { class: 'btn ' + (url ? '' : 'primary') + ' wide', type: 'button', onclick: () => reserveItem(it) }, 'Lo prendo io'));
     else if (isMine) info.appendChild(el('button', { class: 'btn quiet wide', type: 'button', onclick: () => releaseRes(it) }, 'Annulla, non lo prendo più'));
     if (admin) info.appendChild(adminActions(it));
-    box.appendChild(el('div', { class: 'dpage' }, gallery, info));
+    box.appendChild(el('div', { class: 'dpage' }, showGallery ? gallery : null, info));
   }
 
   function render() {
@@ -306,15 +307,12 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     function drawVariants() {
       vBox.replaceChildren(...variants.map((v, n) => {
         const inp = (ph, key, type) => { const i = el('input', { type: type || 'text', placeholder: ph, value: v[key] || '', 'aria-label': ph }); i.addEventListener('input', () => { v[key] = i.value; }); return i; };
-        const fav = el('input', { type: 'checkbox' }); fav.checked = !!v.fav;
-        fav.addEventListener('change', () => { variants.forEach((x) => { x.fav = false; }); v.fav = fav.checked; drawVariants(); });
         return el('div', { class: 'vedit' },
           inp('Nome dello stile (es. Verde salvia)', 'label'), inp('Prezzo (es. 29 €)', 'price'), inp('Link dove comprarlo https://…', 'link', 'url'), inp('Foto: indirizzo immagine https://…', 'img', 'url'),
-          el('label', { class: 'favlabel' }, fav, ' Il mio preferito'),
           el('button', { class: 'btn danger', type: 'button', onclick: () => { variants.splice(n, 1); drawVariants(); } }, 'Rimuovi stile'));
       }));
     }
-    const addVariant = el('button', { class: 'btn', type: 'button', onclick: () => { if (variants.length >= MAX_VARIANTS) { toast('Massimo ' + MAX_VARIANTS + ' stili'); return; } variants.push({ label: '', price: '', link: '', img: '', fav: false }); drawVariants(); } }, 'Aggiungi uno stile');
+    const addVariant = el('button', { class: 'btn', type: 'button', onclick: () => { if (variants.length >= MAX_VARIANTS) { toast('Massimo ' + MAX_VARIANTS + ' stili'); return; } variants.push({ label: '', price: '', link: '', img: '' }); drawVariants(); } }, 'Aggiungi uno stile');
     drawVariants();
     const imgs = (data.imgs || []).slice();
     const imgBox = el('div', { class: 'imgs' });
@@ -356,7 +354,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
         if (v.link && !safeUrl(v.link.trim())) return 'Il link di uno stile deve iniziare con http:// o https://';
         if (v.img && !safeImg(v.img.trim())) return 'La foto di uno stile deve essere un indirizzo https://';
       }
-      const cleanVariants = variants.map((v) => ({ label: (v.label || '').trim(), price: (v.price || '').trim(), link: (v.link || '').trim(), img: (v.img || '').trim(), fav: !!v.fav })).filter((v) => v.label || v.link || v.img);
+      const cleanVariants = variants.map((v) => ({ label: (v.label || '').trim(), price: (v.price || '').trim(), link: (v.link || '').trim(), img: (v.img || '').trim() })).filter((v) => v.label || v.link || v.img);
       const { id, ...row } = { id: data.id, title: v('f-title'), note: v('f-note'), cat: v('f-cat'), price: v('f-price'), link: v('f-link'), imgs: imgs.slice(), variants: cleanVariants, done: !!data.done, createdAt: data.createdAt || Date.now() };
       try { await setDoc(doc(db, 'ideas', id), row); } catch (e) { return 'Salvataggio non riuscito. Sei ancora dentro?'; }
       close();

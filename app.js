@@ -54,8 +54,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
   // Nome del negozio da mostrare sul pulsante (i link corti di Amazon hanno un dominio incomprensibile).
   const shopOf = (u) => {
     const h = (() => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return ''; } })();
-    if (/^(amzn\.(eu|to|com)|a\.co)$|(^|\.)amazon\./i.test(h)) return 'Amazon';
-    if (/(^|\.)etsy\.com$/i.test(h)) return 'Etsy';
+    if (/^(amzn\.[a-z]+|a\.co)$/i.test(h)) return 'Amazon';
     return h;
   };
   const hostOf = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return ''; } };
@@ -154,11 +153,33 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
   function giftIcon() {
     const ns = 'http://www.w3.org/2000/svg';
     const svg = document.createElementNS(ns, 'svg');
-    svg.setAttribute('viewBox', '0 0 64 64'); svg.setAttribute('fill', 'none'); svg.setAttribute('stroke', 'currentColor');
-    svg.setAttribute('stroke-width', '3'); svg.setAttribute('stroke-linecap', 'round'); svg.setAttribute('stroke-linejoin', 'round');
-    ['M10 26h44v28H10z', 'M8 18h48v8H8z', 'M32 18v36', 'M32 18c-6-10-18-9-16-3 1 4 10 3 16 3zm0 0c6-10 18-9 16-3-1 4-10 3-16 3z'].forEach((d) => {
-      const p = document.createElementNS(ns, 'path'); p.setAttribute('d', d); svg.appendChild(p);
-    });
+    svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('aria-hidden', 'true');
+    for (let n = 0; n < 8; n++) {
+      const ang = (n * Math.PI) / 4, r1 = n % 2 ? 4 : 3.5, r2 = n % 2 ? 7 : 9;
+      const l = document.createElementNS(ns, 'path');
+      l.setAttribute('d', 'M' + (12 + Math.cos(ang) * r1).toFixed(2) + ' ' + (12 + Math.sin(ang) * r1).toFixed(2) + 'L' + (12 + Math.cos(ang) * r2).toFixed(2) + ' ' + (12 + Math.sin(ang) * r2).toFixed(2));
+      svg.appendChild(l);
+    }
+    return svg;
+  }
+
+  function arrowIcon() {
+    const ns = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('aria-hidden', 'true'); svg.setAttribute('class', 'arrow');
+    const p = document.createElementNS(ns, 'path');
+    p.setAttribute('d', 'M7 17L17 7M8.5 7H17v8.5');
+    svg.appendChild(p);
+    return svg;
+  }
+
+  function chevron(dir) {
+    const ns = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('aria-hidden', 'true');
+    const p = document.createElementNS(ns, 'path');
+    p.setAttribute('d', dir < 0 ? 'M15 5l-7 7 7 7' : 'M9 5l7 7-7 7');
+    svg.appendChild(p);
     return svg;
   }
 
@@ -201,6 +222,9 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
       el('button', { type: 'button', class: 'danger', onclick: () => deleteItem(it) }, 'Elimina'));
   }
 
+  const wideScreen = window.matchMedia('(min-width: 780px)');
+  wideScreen.addEventListener('change', () => render());
+
   function renderDetail(id) {
     const box = $('detail'); box.replaceChildren(backLink());
     const it = state.items.find((x) => x.id === id);
@@ -226,8 +250,8 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
       if (imgs.length > 1) {
         main.classList.add('swipe');
         main.append(
-          el('button', { class: 'gnav prev', type: 'button', 'aria-label': 'Foto precedente', onclick: () => go(-1) }, '‹'),
-          el('button', { class: 'gnav next', type: 'button', 'aria-label': 'Foto successiva', onclick: () => go(1) }, '›'),
+          el('button', { class: 'gnav prev', type: 'button', 'aria-label': 'Foto precedente', onclick: () => go(-1) }, chevron(-1)),
+          el('button', { class: 'gnav next', type: 'button', 'aria-label': 'Foto successiva', onclick: () => go(1) }, chevron(1)),
           el('span', { class: 'gcount' }, (galIdx + 1) + '/' + imgs.length));
         let sx = null;
         main.addEventListener('pointerdown', (e) => { sx = e.clientX; });
@@ -240,6 +264,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
       page.appendChild(gallery);
     }
 
+    let buyBtn = null;
     const info = el('div', { class: 'dinfo' });
     info.append(el('span', { class: 'chip-cat' }, catOf(it)), el('h1', { class: 'dtitle' }, it.title));
     if (single && single.price) info.appendChild(el('div', { class: 'dprice' }, single.price));
@@ -264,19 +289,21 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
               el('div', { class: 'opt-name' }, o.label || 'Stile ' + (n + 1)),
               price ? el('div', { class: 'opt-price' }, price) : null,
               !ourl ? el('div', { class: 'opt-any' }, 'Va bene da qualsiasi negozio') : null),
-            ourl ? el('a', { class: 'btn outline small', href: ourl, target: '_blank', rel: 'noopener noreferrer', 'aria-label': 'Vedi su ' + (shopOf(ourl) || 'il sito') }, 'Vedi su ' + (shopOf(ourl) || 'il sito') + ' ↗') : null)));
+            ourl ? el('a', { class: 'btn outline small', href: ourl, target: '_blank', rel: 'noopener noreferrer', 'aria-label': 'Vedi su ' + (shopOf(ourl) || 'il sito') }, 'Vedi su ' + (shopOf(ourl) || 'il sito'), arrowIcon()) : null)));
       });
       info.appendChild(list);
     } else if (url) {
-      info.appendChild(el('a', { class: 'btn outline wide', href: url, target: '_blank', rel: 'noopener noreferrer' }, 'Dove comprarlo: ' + (shopOf(url) || 'vai al sito') + ' ↗'));
+      buyBtn = el('a', { class: 'btn outline wide', href: url, target: '_blank', rel: 'noopener noreferrer' }, 'Dove comprarlo: ' + (shopOf(url) || 'vai al sito'), arrowIcon());
+      if (!wideScreen.matches) info.appendChild(buyBtn);
     } else {
       info.appendChild(el('p', { class: 'hint-d' }, 'Per questa idea non c\'è un link: le foto servono a dare un\'idea.'));
     }
 
-    const panel = el('div', { class: 'cta-panel' + (opts.length > 1 ? ' row' : '') });
+    const panel = el('div', { class: 'cta-panel' + (opts.length > 1 ? ' row' : '') + (buyBtn && wideScreen.matches && !taken ? ' pair' : '') });
     if (!taken) {
       panel.append(
         el('button', { class: 'btn primary wide', type: 'button', onclick: () => reserveItem(it) }, heartIcon(), 'Lo prendo io'),
+        buyBtn && wideScreen.matches ? buyBtn : null,
         el('p', { class: 'note' }, opts.length > 1
           ? 'Prenoti l\'idea intera: vale per tutti e ' + opts.length + ' gli stili. Poi compri quello che preferisci.'
           : 'Gli altri lo vedranno come già preso. Se cambi idea puoi annullare da questo stesso telefono.'));
@@ -286,6 +313,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
       panel.append(el('p', { class: 'note strong' }, 'Qualcuno ha già scelto questo regalo.'));
     }
     info.appendChild(panel);
+    if (buyBtn && wideScreen.matches && taken) info.insertBefore(buyBtn, panel);
     if (admin) info.appendChild(el('div', { class: 'admin-box' }, adminActions(it)));
     page.appendChild(info);
     box.appendChild(page);
@@ -294,6 +322,8 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
   function render() {
     const rid = routeId();
     document.body.classList.toggle('is-detail', !!rid);
+    document.body.classList.toggle('is-admin', admin);
+    document.body.classList.toggle('is-empty', !state.loading && !state.error && !state.items.length && !admin);
     if (rid) renderDetail(rid); else { $('detail').replaceChildren(); document.title = 'Idee regalo per Mara'; }
     if (filter !== 'Tutte' && !cats().includes(filter)) filter = 'Tutte';
     const chips = $('chips'); chips.replaceChildren();
@@ -327,7 +357,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
       const body = el('div', { class: 'body' }, el('h2', null, el('button', { class: 'open', type: 'button', onclick: () => goDetail(it.id) }, it.title)));
       const price = opts.length > 1 ? null : (opts[0] && opts[0].price) || '';
       const tag = opts.length > 1
-        ? el('span', { class: 'dots' }, el('i'), el('i'), el('i'), opts.length + ' stili')
+        ? (admin ? el('span', null, opts.length + ' stili') : el('span', { class: 'dots' }, el('i'), el('i'), el('i'), opts.length + ' stili'))
         : price ? el('span', null, price) : null;
       if (admin) {
         const status = state.reserved.has(it.id) ? 'Preso da un invitato' : it.done ? 'Segnato preso da te' : '';
@@ -347,6 +377,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
       grid.appendChild(card);
     });
     const open = state.items.filter((i) => !isTaken(i)).length;
+    if (admin && state.items.length) grid.appendChild(el('p', { class: 'admin-note' }, 'Elimina chiede sempre conferma prima di cancellare.'));
     $('count').textContent = state.loading || !state.items.length || admin ? '' : state.items.length + ' idee, ' + open + ' ancora da regalare';
     renderAdminBar();
   }
@@ -412,7 +443,8 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
   function modal(title, fields, onSubmit, submitLabel, o = {}) {
     const layer = $('layer');
     const msg = el('p', { class: 'msg', role: 'alert' });
-    const form = el('form', { class: 'dlg' + (o.sheet ? ' sheet' : ''), novalidate: '' },
+    const form = el('form', { class: 'dlg' + (o.sheet ? ' sheet' : '') + (o.page ? ' page' : ''), novalidate: '' },
+      o.page ? el('button', { class: 'back', type: 'button', onclick: () => close() }, '← Torna all\'elenco') : null,
       o.sheet ? el('div', { class: 'grab', 'aria-hidden': 'true' }) : null,
       o.sheet ? el('div', { class: 'sheet-icon', 'aria-hidden': 'true' }, heartIcon()) : null,
       el('h3', null, title), ...fields, msg);
@@ -425,7 +457,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
       try { const err = await onSubmit(form, close); if (err) msg.textContent = err; }
       finally { submit.disabled = false; }
     });
-    const overlay = el('div', { class: 'overlay' }, form);
+    const overlay = el('div', { class: 'overlay' + (o.page ? ' page' : '') }, form);
     overlay.addEventListener('click', (e) => { if (e.target === overlay && o.sheet) close(); });
     layer.replaceChildren(overlay);
     const first = form.querySelector('input,textarea,select'); if (first) first.focus(); else submit.focus();
@@ -495,7 +527,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
       const { id, ...row } = { id: data.id, title: v('f-title'), note: v('f-note'), cat: v('f-cat'), options: clean, cover: clean.some((o) => o.imgs.includes(cover)) ? cover : '', done: !!data.done, createdAt: data.createdAt || Date.now() };
       try { await setDoc(doc(db, 'ideas', id), row); } catch (e) { console.error(e); return 'Salvataggio non riuscito (' + ((e && e.code) || 'errore') + '). ' + (e && e.code === 'permission-denied' ? 'Le regole di Firestore non ti riconoscono come proprietario: controlla che nelle regole ci sia il tuo UID e non "IL-TUO-UID".' : 'Sei ancora dentro?'); }
       close();
-    }, 'Salva idea');
+    }, 'Salva idea', { page: true });
   }
 
   function openLogin() {

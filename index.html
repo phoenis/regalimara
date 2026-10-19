@@ -154,18 +154,8 @@ body.is-detail #detail { display: block; }
 </div>
 <div id="layer"></div>
 
-<!-- Idee di esempio: si vedono solo finché config.js non è compilato (modalità demo, sola lettura). -->
-<script type="application/json" id="data">{"items":[
-{"id":"i1","title":"Corso di cucina in due","note":"Una serata a impastare, tagliare e assaggiare insieme, con uno chef che spiega tutto passo per passo.","cat":"Esperienze","price":"80–120 €","done":false},
-{"id":"i2","title":"Set di tè e infusi artigianali","note":"Sei miscele in barattolini di latta, con un colino a forma di fiore. Da bere sul divano.","cat":"Cucina","price":"25–35 €","done":false,"imgs":["img/demo-te.svg"],"link":""},
-{"id":"i3","title":"Un limone in vaso","note":"Un alberello vero per il balcone, con terriccio e istruzioni per farlo fiorire.","cat":"Casa","price":"20–40 €","done":false,"imgs":["img/demo-limone.svg"],"link":""},
-{"id":"i4","title":"Libro di ricette illustrato","note":"Uno di quelli grandi, con le foto, da sfogliare anche senza cucinare niente.","cat":"Libri","price":"20–30 €","done":false},
-{"id":"i5","title":"Cena a sorpresa","note":"Un tavolo prenotato in un posto nuovo. Il nome si scopre solo all'ingresso.","cat":"Esperienze","price":"60–100 €","done":false},
-{"id":"i6","title":"Plaid in lana morbidissimo","note":"Grande abbastanza per due, in un colore caldo. Per le sere d'autunno.","cat":"Casa","price":"40–60 €","done":false,"imgs":["img/demo-plaid.svg", "img/demo-plaid-dettaglio.svg"],"link":"https://www.amazon.it/"},
-{"id":"i7","title":"Giornata alle terme","note":"Ingresso per un pomeriggio di acqua calda e niente da fare.","cat":"Benessere","price":"50–90 €","done":false},
-{"id":"i8","title":"Candela profumata fatta a mano","note":"Cera di soia, profumo di fico e cedro, nel vasetto di vetro che poi si riusa.","cat":"Casa","price":"15–25 €","done":false,"imgs":["img/demo-candela.svg"],"link":""},
-{"id":"i9","title":"Kit per fare il pane","note":"Lievito madre, cestino per la lievitazione e lama per incidere. La domenica profuma.","cat":"Cucina","price":"30–45 €","done":false}
-]}</script>
+<!-- Idee mostrate solo finché config.js non è compilato (modalità prova). Con Firebase le idee vivono nel database. -->
+<script type="application/json" id="data">{"items":[]}</script>
 
 <script src="config.js"></script>
 <script type="module" src="app.js"></script>

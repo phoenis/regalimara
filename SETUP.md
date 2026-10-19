@@ -8,10 +8,10 @@
 6. **Impostazioni progetto > Le tue app > aggiungi app Web**: copia i valori di `firebaseConfig` in `config.js` e committa.
 7. **Authentication > Impostazioni > Domini autorizzati**: aggiungi il dominio di GitHub Pages (`tuonome.github.io`).
 8. **GitHub > Settings > Pages**: pubblica dal branch scelto, cartella root.
-9. Apri la pagina, entra da "Area riservata" e premi "Carica le idee di esempio" (o aggiungi le tue).
+9. Apri la pagina, entra da "Area riservata" e premi "Nuova idea" per aggiungere le idee (titolo, prezzo, link e foto).
 
 Note:
 - Chi apre il link vede e prenota senza account (Firebase gli assegna un accesso anonimo invisibile). Può annullare solo dallo stesso browser: se cancella i dati del sito, perde questa possibilità.
 - Chiunque ha il link può prenotare qualsiasi idea. Dall'area riservata puoi liberare una prenotazione.
 - Foto: in "Nuova idea" incolla l'indirizzo dell'immagine (su Pinterest "Copia indirizzo immagine", di solito `i.pinimg.com`). Se la scheda originale viene rimossa, la foto può sparire.
-- Se `config.js` è vuoto la pagina mostra le idee di esempio in sola lettura.
+- Se `config.js` è vuoto la pagina è in modalità prova: nessuna idea e prenotazioni solo locali.

@@ -27,7 +27,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
   const myUid = () => (live ? (auth.currentUser ? auth.currentUser.uid : null) : 'demo');
   const isMineRes = (id) => state.reserved.has(id) && state.reserved.get(id) === myUid();
 
-  if (!live) $('head').querySelector('.lede').after(el('p', { class: 'demo-note' }, 'Versione di prova: le idee sono di esempio e le prenotazioni restano solo su questo browser.'));
+  if (!live) $('head').querySelector('.lede').after(el('p', { class: 'demo-note' }, 'Versione di prova: le prenotazioni restano solo su questo browser.'));
   if (ILLUSTRAZIONI.intestazione) {
     const hero = document.createElement('img');
     hero.className = 'hero'; hero.alt = ''; hero.src = ILLUSTRAZIONI.intestazione;
@@ -103,15 +103,6 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
       if (state.reserved.has(it.id)) await deleteDoc(doc(db, 'reservations', it.id));
       await deleteDoc(doc(db, 'ideas', it.id));
     } catch (e) { toast('Non sono riuscito a eliminarla.'); }
-  }
-
-  async function importSeed() {
-    try {
-      const batch = writeBatch(db);
-      const now = Date.now();
-      seed.forEach((it, n) => { const { id, ...rest } = it; batch.set(doc(db, 'ideas', id), { ...rest, imgs: [], link: '', createdAt: now - n }); });
-      await batch.commit(); toast('Idee di esempio caricate');
-    } catch (e) { toast('Non sono riuscito a caricarle.'); }
   }
 
   // ---------- schede ----------
@@ -218,7 +209,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     const grid = $('grid'); grid.replaceChildren();
     if (state.loading) grid.appendChild(el('div', { class: 'loading' }, 'Carico le idee…'));
     else if (state.error) grid.appendChild(el('div', { class: 'empty' }, 'Non riesco a caricare le idee. Riprova tra poco.'));
-    else if (!list.length) grid.appendChild(el('div', { class: 'empty' }, admin ? 'Nessuna idea qui. Premi "Nuova idea" per aggiungerne una.' : 'Nessuna idea in questa categoria, per ora.'));
+    else if (!list.length) grid.appendChild(el('div', { class: 'empty' }, admin ? 'Nessuna idea qui. Premi "Nuova idea" per aggiungerne una.' : state.items.length ? 'Nessuna idea in questa categoria, per ora.' : 'Le idee regalo arrivano presto. Ripassa tra poco!'));
     list.forEach((it) => {
       const taken = isTaken(it), isMine = isMineRes(it.id);
       const card = el('article', { class: 'card' + (taken ? ' done' : '') });
@@ -235,7 +226,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
       grid.appendChild(card);
     });
     const open = state.items.filter((i) => !isTaken(i)).length;
-    $('count').textContent = state.loading ? '' : state.items.length + ' idee, ' + open + ' ancora da regalare';
+    $('count').textContent = state.loading || !state.items.length ? '' : state.items.length + ' idee, ' + open + ' ancora da regalare';
     renderAdminBar();
   }
 
@@ -246,7 +237,6 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     bar.append(
       el('strong', null, 'Gestione attiva: le modifiche si salvano subito'),
       el('button', { class: 'btn', type: 'button', onclick: () => editItem(null) }, 'Nuova idea'),
-      !state.items.length && !state.loading ? el('button', { class: 'btn', type: 'button', onclick: importSeed }, 'Carica le idee di esempio') : null,
       el('button', { class: 'btn', type: 'button', onclick: () => signOut(auth) }, 'Esci'));
   }
 

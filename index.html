@@ -11,7 +11,8 @@
   color-scheme: light;
   --bg-top: #FFFFFF; --bg-bottom: #FFFFFF;
   --ink: #16161A; --ink-2: #6C6C75;
-  --accent: #16161A; --accent-soft: #F1F1F4; --accent-ink: #16161A; --on-accent: #FFFFFF; --heart: #E5484D; --tile: #F3F3F6;
+  --accent: #16161A; --accent-soft: #F1F1F4; --accent-ink: #16161A; --on-accent: #FFFFFF; --free: #1E8A4C; --free-soft: #E3F4EA;
+  --heart: #E5484D; --tile: #F3F3F6;
   --taken: #EDEDF1; --taken-ink: #4A4A53; --row-taken: #F7F7F9;
   --line: #ECECF0; --line-field: #8E8E99; --danger: #B42318; --card: #FFFFFF;
   --p-rosa: #F3F3F6; --p-menta: #EFF2F1; --p-pesca: #F4F2F0; --p-lilla: #F1F1F6; --p-burro: #F4F3EC;
@@ -331,6 +332,9 @@ body.is-admin .grid { display: flex; flex-direction: column; max-width: 40rem; m
 .tile .fab::after { right: 0; top: calc(var(--fr) * -1); }
 .tile .fab .ico { box-sizing: content-box; width: 1.125rem; height: 1.125rem; padding: 0.625rem; border-radius: 50%; background: var(--tile); }
 .tile .media { overflow: hidden; position: relative; }
+button.fab { color: var(--free); }
+.tile button.fab .ico { background: var(--free-soft); }
+button.fab.top { background: var(--free-soft); }
 .fab.on { color: var(--ink); cursor: default; }
 .fab.off { color: var(--ink-2); cursor: default; }
 .fab.top { top: 0.75rem; right: 0.75rem; bottom: auto; width: 2.5rem; height: 2.5rem; background: rgba(255,255,255,.9); } .fab.top .ico { width: 1.125rem; height: 1.125rem; }
@@ -381,7 +385,7 @@ body.is-admin .grid { display: flex; flex-direction: column; max-width: 40rem; m
 <!-- Idee mostrate solo finché config.js non è compilato (modalità prova). Con Firebase le idee vivono nel database. -->
 <script type="application/json" id="data">{"items":[]}</script>
 
-<script src="config.js?v=202610191300"></script>
-<script type="module" src="app.js?v=202610191300"></script>
+<script src="config.js?v=202610191302"></script>
+<script type="module" src="app.js?v=202610191302"></script>
 </body>
 </html>

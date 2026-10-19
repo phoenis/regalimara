@@ -151,7 +151,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     const svg = document.createElementNS(ns, 'svg');
     svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('aria-hidden', 'true'); svg.setAttribute('class', 'heart');
     const p = document.createElementNS(ns, 'path');
-    p.setAttribute('d', 'M12 20.5s-7.5-4.8-9.6-9.6A5.4 5.4 0 0 1 12 6.4a5.4 5.4 0 0 1 9.6 4.5c-2.1 4.8-9.6 9.6-9.6 9.6z');
+    p.setAttribute('d', 'M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3.2.9-4.5 2.5C10.7 3.9 9.300 3 7.500 3A5.500 5.500 0 0 0 2 8.500c0 2.300 1.500 4 3 5.500l7 7z');
     svg.appendChild(p);
     return svg;
   }

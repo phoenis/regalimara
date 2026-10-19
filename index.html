@@ -322,11 +322,11 @@ body.is-admin .grid { display: flex; flex-direction: column; max-width: 40rem; m
 .tile.mine .media { box-shadow: 0 0 0 2px var(--ink); }
 .tile.skeleton { pointer-events: none; display: flex; flex-direction: column; gap: var(--s-2); }
 .sk-media { aspect-ratio: 1 / 1.08; border-radius: var(--r-md); }
-.fab { position: absolute; right: var(--s-2); bottom: var(--s-2); width: 2.5rem; height: 2.5rem; border-radius: 50%; border: 0; background: #fff; color: var(--ink); display: grid; place-items: center; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,.14); z-index: 2; }
-.fab .heart { width: 1.25rem; height: 1.25rem; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; }
+.fab { position: absolute; right: 0.5rem; bottom: 0.5rem; width: 2rem; height: 2rem; border-radius: 50%; border: 0; background: rgba(255,255,255,.92); color: var(--ink); display: grid; place-items: center; cursor: pointer; box-shadow: none; z-index: 2; }
+.fab .heart { width: 1rem; height: 1rem; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; }
 .fab.on { color: var(--heart); cursor: default; } .fab.on .heart { fill: currentColor; }
 .fab.off { color: var(--ink-2); cursor: default; } .fab.off .heart { fill: currentColor; stroke: none; opacity: .6; }
-.fab.top { top: var(--s-2); bottom: auto; width: 2.75rem; height: 2.75rem; }
+.fab.top { top: 0.75rem; right: 0.75rem; bottom: auto; width: 2.5rem; height: 2.5rem; background: rgba(255,255,255,.9); } .fab.top .heart { width: 1.125rem; height: 1.125rem; }
 .mine-meta { color: var(--ink); }
 .dots i { background: #C9C9D1; border-color: #fff; }
 .dots i:nth-child(2) { background: #A3A3AE; } .dots i:nth-child(3) { background: #7A7A86; }
@@ -374,7 +374,7 @@ body.is-admin .grid { display: flex; flex-direction: column; max-width: 40rem; m
 <!-- Idee mostrate solo finché config.js non è compilato (modalità prova). Con Firebase le idee vivono nel database. -->
 <script type="application/json" id="data">{"items":[]}</script>
 
-<script src="config.js?v=202610191252"></script>
-<script type="module" src="app.js?v=202610191252"></script>
+<script src="config.js?v=202610191254"></script>
+<script type="module" src="app.js?v=202610191254"></script>
 </body>
 </html>

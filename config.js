@@ -3,9 +3,9 @@
 // Lascia tutto vuoto per vedere la pagina in modalità demo, senza prenotazioni.
 window.REGALI_CONFIG = {
   firebase: {
-    apiKey: '',
-    authDomain: '',
-    projectId: '',
-    appId: '',
+    apiKey: "AIzaSyDIrK2VZQmrosDtQW3kk8Kbz8yYWEQzPO8",
+    authDomain: "idee-regalo-mara.firebaseapp.com",  
+    projectId: "idee-regalo-mara",
+    appId: "1:925928302301:web:b030f5dae63c71c05b1d34",
   },
 };

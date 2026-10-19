@@ -5,25 +5,25 @@
 <meta name="color-scheme" content="light">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Idee regalo per Mara</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700;1,9..144,700&family=Nunito:wght@400;600;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,600;1,9..144,700&family=Nunito:wght@400;600;700;800&display=swap">
 <style>
 :root {
   color-scheme: light;
-  --bg-top: #FFF6F1; --bg-bottom: #FFEDE4;
-  --ink: #262447; --ink-2: #6B6785;
-  --accent: #C2305C; --accent-soft: #FDE7EC; --accent-ink: #A8264E; --on-accent: #FFFFFF;
-  --taken: #EEEAF0; --taken-ink: #4E4A66; --row-taken: #FBF8F7;
-  --line: #F0DDD3; --line-field: #948CA6; --danger: #B42318; --card: #FFFFFF;
-  --p-rosa: #FBD9E1; --p-menta: #CDEFE0; --p-pesca: #FFDCC4; --p-lilla: #E3DBF6; --p-burro: #FBEDB0;
+  --bg-top: #FFFFFF; --bg-bottom: #FFFFFF;
+  --ink: #16161A; --ink-2: #6C6C75;
+  --accent: #16161A; --accent-soft: #F1F1F4; --accent-ink: #16161A; --on-accent: #FFFFFF; --heart: #E5484D; --tile: #F3F3F6;
+  --taken: #EDEDF1; --taken-ink: #4A4A53; --row-taken: #F7F7F9;
+  --line: #ECECF0; --line-field: #8E8E99; --danger: #B42318; --card: #FFFFFF;
+  --p-rosa: #F3F3F6; --p-menta: #EFF2F1; --p-pesca: #F4F2F0; --p-lilla: #F1F1F6; --p-burro: #F4F3EC;
   --display: "Fraunces", Georgia, "Times New Roman", serif;
   --body: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
   --fs-display: 2.25rem; --fs-h1: 1.875rem; --fs-h2: 1.375rem; --fs-row: 1.1875rem; --fs-body: 1.125rem; --fs-sm: 1rem; --fs-xs: 0.875rem;
   --px: 0.5rem; /* margine laterale della pagina */
   --s-1: 0.25rem; --s-2: 0.5rem; --s-3: 0.75rem; --s-4: 1rem; --s-5: 1.25rem; --s-6: 1.5rem; --s-8: 2rem; --s-12: 3rem;
   --r-sm: 12px; --r-md: 16px; --r-lg: 22px; --r-xl: 28px; --r-pill: 999px;
-  --sh-card: 0 1px 2px rgba(38,36,71,.05), 0 8px 20px rgba(38,36,71,.07);
-  --sh-hover: 0 2px 4px rgba(38,36,71,.06), 0 14px 28px rgba(38,36,71,.10);
-  --sh-cta: 0 6px 16px rgba(194,48,92,.30);
+  --sh-card: 0 1px 2px rgba(0,0,0,.04), 0 6px 16px rgba(0,0,0,.06);
+  --sh-hover: 0 2px 4px rgba(0,0,0,.06), 0 12px 24px rgba(0,0,0,.10);
+  --sh-cta: 0 6px 16px rgba(0,0,0,.18);
 }
 @media (min-width: 780px) { :root { --fs-display: 3rem; --fs-h1: 2.5rem; --fs-h2: 1.5rem; --fs-row: 1.25rem; --r-lg: 24px; } }
 * { box-sizing: border-box; }
@@ -225,7 +225,7 @@ body.is-detail #detail { display: block; }
 @media (min-width: 780px) { .opt { align-items: center; grid-template-columns: 7rem minmax(0, 1fr); } .opt-pic { width: 7rem; height: 7rem; } .opt-text { flex-direction: row; align-items: center; justify-content: space-between; gap: var(--s-4); } }
 
 /* ---------- finestre e modulo ---------- */
-.overlay { position: fixed; inset: 0; z-index: 20; background: rgba(38,36,71,.5); display: grid; place-items: center; padding: var(--s-4); overflow-y: auto; }
+.overlay { position: fixed; inset: 0; z-index: 20; background: rgba(22,22,26,.5); display: grid; place-items: center; padding: var(--s-4); overflow-y: auto; }
 .dlg { background: var(--card); color: var(--ink); border-radius: var(--r-xl); padding: var(--s-6); width: min(100%, 30rem); box-shadow: 0 12px 40px rgba(0,0,0,.25); }
 .dlg h3 { font-family: var(--display); font-weight: 700; font-size: var(--fs-h2); line-height: 1.15; margin: 0 0 var(--s-3); }
 .dlg label { display: block; font-weight: 800; font-size: var(--fs-sm); margin: var(--s-4) 0 var(--s-1); }
@@ -246,12 +246,12 @@ body.is-detail #detail { display: block; }
 .dlg .hint { margin: var(--s-1) 0 0; font-size: var(--fs-xs); color: var(--ink-2); font-weight: 600; }
 .dlg.sheet { text-align: center; padding: var(--s-6) var(--s-5) var(--s-8); }
 .dlg.sheet h3 { font-size: var(--fs-h1); margin-bottom: var(--s-3); }
-.dlg.sheet .btn.outline { border-color: #E4DAD6; min-height: 3.25rem; }
+.dlg.sheet .btn.outline { border-color: #DEDEE4; min-height: 3.25rem; }
 .dlg.sheet .btn.primary { min-height: 3.5rem; }
 .dlg.page h3 { font-size: var(--fs-h1); margin: var(--s-2) 0 var(--s-3); }
 .dlg.sheet .actions { flex-direction: column; margin-top: var(--s-4); }
 .dlg.sheet .actions .btn { width: 100%; }
-.grab { width: 3rem; height: 0.25rem; border-radius: var(--r-pill); background: #E4DBD6; margin: calc(-1 * var(--s-2)) auto var(--s-4); display: none; }
+.grab { width: 3rem; height: 0.25rem; border-radius: var(--r-pill); background: #DEDEE4; margin: calc(-1 * var(--s-2)) auto var(--s-4); display: none; }
 .sheet-icon { width: 4rem; height: 4rem; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; margin: 0 auto var(--s-4); }
 .sheet-icon .heart { width: 1.75rem; height: 1.75rem; fill: currentColor; stroke: none; }
 .sheet-text { margin: 0 0 var(--s-2); font-size: var(--fs-body); }
@@ -277,7 +277,7 @@ body.is-detail #detail { display: block; }
 .catrow.fixed { color: var(--ink-2); font-weight: 800; justify-content: space-between; padding: var(--s-2) var(--s-1); }
 .overlay.page { display: block; padding: 0; background: linear-gradient(180deg, var(--bg-top), var(--bg-bottom)); overflow-y: auto; }
 .dlg.page { width: min(100%, 40rem); margin: 0 auto; border-radius: 0; box-shadow: none; background: transparent; padding: var(--s-2) var(--px) 8rem; max-height: none; }
-.dlg.page .back { background: none; border: 0; padding: 0; cursor: pointer; font-family: var(--body); }
+.back-text { display: inline-flex; align-items: center; min-height: 2.75rem; background: none; border: 0; padding: 0; cursor: pointer; font: 800 var(--fs-sm) var(--body); color: var(--ink); }
 .dlg.page .actions { position: fixed; left: 0; right: 0; bottom: 0; margin: 0; justify-content: center; background: #fff; padding: var(--s-3) var(--s-4) calc(var(--s-3) + env(safe-area-inset-bottom, 0px)); box-shadow: 0 -4px 16px rgba(38,36,71,.08); }
 .dlg.page .actions .btn { flex: 1; max-width: 18rem; }
 .msg { margin: var(--s-3) 0 0; font-weight: 700; color: var(--danger); font-size: var(--fs-sm); }
@@ -288,13 +288,77 @@ body.is-detail #detail { display: block; }
   .dlg { width: 100%; max-height: 92vh; overflow-y: auto; border-radius: var(--r-xl) var(--r-xl) 0 0; }
   .grab { display: block; }
 }
+
+/* ---------- stile "negozio": bianco, nero e un cuore rosso ---------- */
+html, body { background: #fff; }
+.wrap { max-width: 56rem; }
+header { text-align: left; align-items: flex-start; padding: var(--s-4) var(--s-1) var(--s-1); }
+.logo { display: none; }
+h1 { font-family: var(--body); font-weight: 800; font-size: clamp(1.75rem, 7vw, 2.25rem); line-height: 1.15; letter-spacing: -0.01em; text-wrap: balance; }
+h1 span { font-family: var(--display); font-style: italic; font-weight: 600; color: var(--ink); }
+.lede { font-family: var(--display); font-style: italic; font-weight: 400; color: var(--ink-2); font-size: 1rem; line-height: 1.4; margin: var(--s-1) 0 0; max-width: none; }
+.chip { min-height: 2.5rem; border: 0; background: var(--accent-soft); font-weight: 600; padding: 0 var(--s-4); box-shadow: none; }
+.chip[aria-pressed="true"] { background: var(--ink); color: #fff; }
+@media (min-width: 780px) { .chips { justify-content: flex-start; } }
+.demo-note { box-shadow: none; background: var(--accent-soft); }
+
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-5) var(--s-3); margin-top: var(--s-2); }
+@media (min-width: 780px) { .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-6) var(--s-4); } }
+.grid > .empty-card, .grid > .loading, .grid > .counts, .grid > .admin-note { grid-column: 1 / -1; }
+body.is-admin .grid { display: flex; flex-direction: column; max-width: 40rem; margin-inline: auto; gap: var(--s-3); }
+.tile { min-width: 0; }
+.tile .media { aspect-ratio: 1 / 1.08; border-radius: var(--r-md); background: var(--tile); cursor: pointer; }
+.tile .media > img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.tile .ph { aspect-ratio: auto; height: 100%; background: var(--tile); }
+.tile .ph svg { width: 22%; }
+.tile .ph::after { inset: 0.625rem; }
+.tbody { padding: var(--s-2) var(--s-1) 0; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.tile h2 { font-family: var(--body); font-weight: 700; font-size: 1rem; line-height: 1.3; margin: 0; overflow-wrap: anywhere; }
+.tile h2 .open { all: unset; cursor: pointer; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.tile h2 .open:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; border-radius: 4px; }
+.tile .meta { font-size: 0.9375rem; }
+.tile.done .media { filter: grayscale(1); opacity: .55; }
+.tile.done h2 { color: var(--ink-2); }
+.tile.mine .media { box-shadow: 0 0 0 2px var(--ink); }
+.tile.skeleton { pointer-events: none; display: flex; flex-direction: column; gap: var(--s-2); }
+.sk-media { aspect-ratio: 1 / 1.08; border-radius: var(--r-md); }
+.fab { position: absolute; right: var(--s-2); bottom: var(--s-2); width: 2.5rem; height: 2.5rem; border-radius: 50%; border: 0; background: #fff; color: var(--ink); display: grid; place-items: center; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,.14); z-index: 2; }
+.fab .heart { width: 1.25rem; height: 1.25rem; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; }
+.fab.on { color: var(--heart); cursor: default; } .fab.on .heart { fill: currentColor; }
+.fab.off { color: var(--ink-2); cursor: default; } .fab.off .heart { fill: currentColor; stroke: none; opacity: .6; }
+.fab.top { top: var(--s-2); bottom: auto; width: 2.75rem; height: 2.75rem; }
+.mine-meta { color: var(--ink); }
+.dots i { background: #C9C9D1; border-color: #fff; }
+.dots i:nth-child(2) { background: #A3A3AE; } .dots i:nth-child(3) { background: #7A7A86; }
+.tile .ph::after { border-color: rgba(22,22,26,.14); }
+.admin-bar .btn.primary { background: #fff; border-color: #fff; color: var(--ink); box-shadow: none; }
+
+/* dettaglio: pulsanti tondi sulla foto, titolo in corsivo, barra fissa in basso */
+#detail { max-width: 40rem; margin: 0 auto; padding-bottom: 6rem; }
+.back { position: relative; z-index: 5; display: grid; place-items: center; width: 2.75rem; height: 2.75rem; min-height: 0; margin: var(--s-2) 0 var(--s-2); padding: 0; border-radius: 50%; background: var(--accent-soft); color: var(--ink); text-decoration: none; }
+.back svg { width: 1.25rem; height: 1.25rem; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.back.over { margin: var(--s-2) 0 -3.25rem var(--s-2); background: rgba(255,255,255,.92); box-shadow: 0 1px 4px rgba(0,0,0,.14); }
+.gallery .media { border-radius: var(--r-lg); box-shadow: none; background: var(--tile); }
+.gallery .media > img { background: var(--tile); }
+.gallery .ph { background: var(--tile); }
+.dtitle { font-family: var(--display); font-style: italic; font-weight: 700; }
+.sec { margin: var(--s-2) 0 0; font-size: 1rem; font-weight: 800; }
+.note-s { margin: 0; color: var(--ink-2); font-size: 0.9375rem; }
+.buybar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 15; background: #fff; border-top: 1px solid var(--line); padding: var(--s-3) max(var(--px), env(safe-area-inset-right, 0px)) calc(var(--s-3) + env(safe-area-inset-bottom, 0px)); }
+.bb-in { max-width: 40rem; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: var(--s-4); padding-inline: var(--s-1); }
+.bb-price { display: flex; flex-direction: column; min-width: 0; }
+.bb-l { color: var(--ink-2); font-size: 0.875rem; font-weight: 600; }
+.bb-price strong { font-size: 1.375rem; font-weight: 800; line-height: 1.1; }
+.buybar .btn { flex: 1 1 auto; max-width: 16rem; min-height: 3.25rem; font-size: 1.0625rem; }
+.btn.disabled { background: var(--taken); border-color: var(--taken); color: var(--taken-ink); cursor: default; box-shadow: none; }
+.notice .heart { color: var(--heart); }
+.sheet-icon { background: #FDECEC; color: var(--heart); }
 </style>
 </head>
 <body>
 <div class="wrap">
   <div id="adminbar" hidden></div>
   <header id="head">
-    <svg class="logo" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.5-4.8-9.6-9.6A5.4 5.4 0 0 1 12 6.4a5.4 5.4 0 0 1 9.6 4.5c-2.1 4.8-9.6 9.6-9.6 9.6z"/></svg>
     <h1>Idee regalo per <span>Mara</span></h1>
     <p class="lede">Tocca il cuore sull'idea che vuoi regalare: gli altri la vedranno come già presa.</p>
   </header>

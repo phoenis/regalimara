@@ -215,8 +215,8 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
   const routeId = () => { const m = location.hash.match(/^#\/idea\/([^/]+)$/); return m ? decodeURIComponent(m[1]) : null; };
   let listScroll = 0, fromList = false, galIdx = 0, galFor = null;
   function goDetail(id) { listScroll = window.scrollY; fromList = true; location.hash = '#/idea/' + encodeURIComponent(id); }
-  function backLink() {
-    return el('a', { class: 'back', href: '#/', onclick: (e) => { e.preventDefault(); if (fromList) history.back(); else location.hash = '#/'; } }, '← Tutte le idee');
+  function backLink(over) {
+    return el('a', { class: 'back' + (over ? ' over' : ''), href: '#/', 'aria-label': 'Torna a tutte le idee', onclick: (e) => { e.preventDefault(); if (fromList) history.back(); else location.hash = '#/'; } }, chevron(-1));
   }
 
   function adminActions(it) {
@@ -228,11 +228,8 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
       el('button', { type: 'button', class: 'danger', onclick: () => deleteItem(it) }, 'Elimina'));
   }
 
-  const wideScreen = window.matchMedia('(min-width: 780px)');
-  wideScreen.addEventListener('change', () => render());
-
   function renderDetail(id) {
-    const box = $('detail'); box.replaceChildren(backLink());
+    const box = $('detail'); box.replaceChildren(backLink(false));
     const it = state.items.find((x) => x.id === id);
     if (!it) {
       box.appendChild(el('div', { class: 'empty-card' }, el('p', null, state.loading ? 'Carico l\'idea…' : 'Questa idea non c\'è più.')));
@@ -240,6 +237,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     }
     document.title = it.title + ' · Idee regalo per Mara';
     const opts = it.options;
+    box.replaceChildren(backLink(opts.length <= 1));
     const single = opts.length === 1 ? opts[0] : null;
     // Una sola opzione: galleria con le sue foto. Più opzioni: righe tutte uguali, senza una foto principale.
     const imgs = single ? single.imgs.map(safeImg).filter(Boolean) : [];
@@ -251,6 +249,9 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
 
     if (opts.length <= 1) {
       const main = mediaOf({ ...it, options: [{ imgs: imgs.length ? [imgs[galIdx]] : [] }] });
+      main.appendChild(!isTaken(it)
+        ? el('button', { class: 'fab top', type: 'button', 'aria-label': 'Lo prendo io', title: 'Lo prendo io', onclick: () => reserveItem(it) }, heartIcon())
+        : el('span', { class: 'fab top ' + (isMineRes(it.id) ? 'on' : 'off'), 'aria-hidden': 'true' }, heartIcon()));
       const gallery = el('div', { class: 'gallery' }, main);
       const go = (d) => { galIdx = (galIdx + d + imgs.length) % imgs.length; render(); };
       if (imgs.length > 1) {
@@ -270,11 +271,9 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
       page.appendChild(gallery);
     }
 
-    let buyBtn = null;
     const info = el('div', { class: 'dinfo' });
     info.append(el('div', { class: 'cat-chips' }, ...catsOf(it).map((c) => el('span', { class: 'chip-cat' }, c))), el('h1', { class: 'dtitle' }, it.title));
-    if (single && single.price) info.appendChild(el('div', { class: 'dprice' }, single.price));
-    if (it.note) info.appendChild(el('p', { class: 'full' }, it.note));
+    if (it.note) info.append(el('h3', { class: 'sec' }, 'Dettagli'), el('p', { class: 'full' }, it.note));
 
     if (opts.length > 1) {
       info.appendChild(el('div', { class: 'notice' }, heartIcon(), el('p', null, el('strong', null, 'Ne basta uno. '), 'Vanno bene tutti e ' + opts.length + ' gli stili: scegli quello che preferisci.')));
@@ -299,30 +298,46 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
       });
       info.appendChild(list);
     } else if (url) {
-      buyBtn = el('a', { class: 'btn outline wide', href: url, target: '_blank', rel: 'noopener noreferrer' }, 'Dove comprarlo: ' + (shopOf(url) || 'vai al sito'), arrowIcon());
-      if (!wideScreen.matches) info.appendChild(buyBtn);
+      info.appendChild(el('a', { class: 'btn outline wide', href: url, target: '_blank', rel: 'noopener noreferrer' }, 'Dove comprarlo: ' + (shopOf(url) || 'vai al sito'), arrowIcon()));
     } else {
       info.appendChild(el('p', { class: 'hint-d' }, 'Per questa idea non c\'è un link: le foto servono a dare un\'idea.'));
     }
 
-    const panel = el('div', { class: 'cta-panel' + (opts.length > 1 ? ' row' : '') + (buyBtn && wideScreen.matches && !taken ? ' pair' : '') });
-    if (!taken) {
-      panel.append(
-        el('button', { class: 'btn primary wide', type: 'button', onclick: () => reserveItem(it) }, heartIcon(), 'Lo prendo io'),
-        ...(buyBtn && wideScreen.matches ? [buyBtn] : []),
-        el('p', { class: 'note' }, opts.length > 1
-          ? 'Prenoti l\'idea intera: vale per tutti e ' + opts.length + ' gli stili. Poi compri quello che preferisci.'
-          : 'Gli altri lo vedranno come già preso. Se cambi idea puoi annullare da questo stesso telefono.'));
-    } else if (mine) {
-      panel.append(el('p', { class: 'note strong' }, 'Hai scelto tu questo regalo.'), el('button', { class: 'btn outline wide', type: 'button', onclick: () => releaseRes(it) }, 'Annulla, non lo prendo più'));
-    } else {
-      panel.append(el('p', { class: 'note strong' }, 'Qualcuno ha già scelto questo regalo.'));
-    }
-    info.appendChild(panel);
-    if (buyBtn && wideScreen.matches && taken) info.insertBefore(buyBtn, panel);
+    if (!taken) info.appendChild(el('p', { class: 'note-s' }, opts.length > 1
+      ? 'Prenoti l\'idea intera: vale per tutti e ' + opts.length + ' gli stili. Poi compri quello che preferisci.'
+      : 'Gli altri lo vedranno come già preso. Se cambi idea puoi annullare da questo stesso telefono.'));
+    const bbLabel = single ? 'Prezzo' : 'Scegli tra';
+    const bbValue = single ? (single.price || '—') : opts.length > 1 ? opts.length + ' stili' : '—';
+    const bbAction = !taken
+      ? el('button', { class: 'btn primary', type: 'button', onclick: () => reserveItem(it) }, heartIcon(), 'Lo prendo io')
+      : mine
+        ? el('button', { class: 'btn outline', type: 'button', onclick: () => releaseRes(it) }, 'Annulla')
+        : el('span', { class: 'btn disabled' }, 'Preso');
+    const bar = el('div', { class: 'buybar' }, el('div', { class: 'bb-in' },
+      el('div', { class: 'bb-price' }, el('span', { class: 'bb-l' }, taken ? (mine ? 'Hai scelto tu questo regalo' : 'Già scelto da qualcuno') : bbLabel), taken ? null : el('strong', null, bbValue)),
+      bbAction));
     if (admin) info.appendChild(el('div', { class: 'admin-box' }, adminActions(it)));
     page.appendChild(info);
-    box.appendChild(page);
+    box.append(page, bar);
+  }
+
+  // Scheda dell'elenco: foto su riquadro chiaro, cuore sull'angolo, titolo e prezzo sotto.
+  function tileFor(it) {
+    const taken = isTaken(it), mine = isMineRes(it.id), opts = it.options;
+    const tile = el('article', { class: 'tile' + (taken && !mine ? ' done' : '') + (mine ? ' mine' : '') });
+    const media = mediaOf(it);
+    media.addEventListener('click', () => goDetail(it.id));
+    media.appendChild(!taken
+      ? el('button', { class: 'fab', type: 'button', 'aria-label': 'Lo prendo io: ' + it.title, title: 'Lo prendo io', onclick: (e) => { e.stopPropagation(); reserveItem(it); } }, heartIcon())
+      : el('span', { class: 'fab ' + (mine ? 'on' : 'off'), 'aria-hidden': 'true' }, heartIcon()));
+    const body = el('div', { class: 'tbody' }, el('h2', null, el('button', { class: 'open', type: 'button', onclick: () => goDetail(it.id) }, it.title)));
+    const price = opts.length > 1 ? null : (opts[0] && opts[0].price) || '';
+    if (mine) body.appendChild(el('div', { class: 'meta mine-meta' }, el('strong', null, 'Lo regali tu'), ' · ', el('button', { class: 'linkbtn', type: 'button', 'aria-label': 'Annulla la prenotazione di ' + it.title, onclick: () => releaseRes(it) }, 'Annulla')));
+    else if (taken) body.appendChild(el('span', { class: 'chip-taken' }, '✓ Preso'));
+    else if (opts.length > 1) body.appendChild(el('div', { class: 'meta' }, el('span', { class: 'dots' }, el('i'), el('i'), el('i'), opts.length + ' stili')));
+    else if (price) body.appendChild(el('div', { class: 'meta' }, price));
+    tile.append(media, body);
+    return tile;
   }
 
   function render() {
@@ -339,7 +354,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     const grid = $('grid'); grid.replaceChildren();
     if (state.loading) {
       grid.appendChild(el('p', { class: 'loading', role: 'status' }, 'Carico le idee…'));
-      for (let n = 0; n < 4; n++) grid.appendChild(el('div', { class: 'card skeleton', 'aria-hidden': 'true' }, el('div', { class: 'sk sk-thumb' }), el('div', { class: 'sk-lines' }, el('div', { class: 'sk sk-l1' }), el('div', { class: 'sk sk-l2' })), el('div', { class: 'sk sk-round' })));
+      for (let n = 0; n < 4; n++) grid.appendChild(el('div', { class: 'tile skeleton', 'aria-hidden': 'true' }, el('div', { class: 'sk sk-media' }), el('div', { class: 'sk sk-l1' }), el('div', { class: 'sk sk-l2' })));
     } else if (state.error) {
       grid.appendChild(el('div', { class: 'empty-card' }, el('h2', null, 'Qualcosa non va'), el('p', null, 'Non riesco a caricare le idee. Riprova tra poco.')));
     } else if (!list.length) {
@@ -354,6 +369,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
       grid.prepend(el('div', { class: 'counts' }, el('span', null, state.items.length + ' idee · ' + prese + ' prese · ' + (state.items.length - prese) + ' libere'), el('button', { class: 'linkbtn', type: 'button', onclick: manageCats }, 'Categorie')));
     }
     list.forEach((it) => {
+      if (!admin) { grid.appendChild(tileFor(it)); return; }
       const taken = isTaken(it), mine = isMineRes(it.id);
       const opts = it.options;
       const card = el('article', { class: 'card' + (taken && !mine ? ' done' : '') + (mine ? ' mine' : '') + (admin ? ' admin' : '') });
@@ -449,7 +465,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     const layer = $('layer');
     const msg = el('p', { class: 'msg', role: 'alert' });
     const form = el('form', { class: 'dlg' + (o.sheet ? ' sheet' : '') + (o.page ? ' page' : ''), novalidate: '' },
-      o.page ? el('button', { class: 'back', type: 'button', onclick: () => close() }, '← Torna all\'elenco') : null,
+      o.page ? el('button', { class: 'back-text', type: 'button', onclick: () => close() }, '← Torna all\'elenco') : null,
       o.sheet ? el('div', { class: 'grab', 'aria-hidden': 'true' }) : null,
       o.sheet ? el('div', { class: 'sheet-icon', 'aria-hidden': 'true' }, heartIcon()) : null,
       el('h3', null, title), ...fields, msg);

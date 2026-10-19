@@ -257,8 +257,8 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     if (opts.length <= 1) {
       const main = mediaOf({ ...it, options: [{ imgs: imgs.length ? [imgs[galIdx]] : [] }] });
       main.appendChild(!isTaken(it)
-        ? el('button', { class: 'fab top', type: 'button', 'aria-label': 'Lo prendo io', title: 'Lo prendo io', onclick: () => reserveItem(it) }, heartIcon())
-        : el('span', { class: 'fab top ' + (isMineRes(it.id) ? 'on' : 'off'), 'aria-hidden': 'true' }, checkIcon()));
+        ? el('button', { class: 'fab top', type: 'button', 'aria-label': 'Libero: lo prendo io', title: 'Lo prendo io', onclick: () => reserveItem(it) }, heartIcon(), el('span', null, 'Libero'))
+        : el('span', { class: 'fab top ' + (isMineRes(it.id) ? 'on' : 'off') }, checkIcon(), el('span', null, 'Preso')));
       const gallery = el('div', { class: 'gallery' + (isTaken(it) ? ' taken' : '') }, main);
       const go = (d) => { galIdx = (galIdx + d + imgs.length) % imgs.length; render(); };
       if (imgs.length > 1) {
@@ -279,7 +279,8 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     }
 
     const info = el('div', { class: 'dinfo' });
-    info.append(el('div', { class: 'cat-chips' }, ...catsOf(it).map((c) => el('span', { class: 'chip-cat' }, c))), el('h1', { class: 'dtitle' }, it.title));
+    info.append(el('div', { class: 'cat-chips' }, ...catsOf(it).map((c) => el('span', { class: 'chip-cat' }, c)),
+      opts.length > 1 ? el('span', { class: 'chip-state ' + (taken ? 'taken' : 'free') }, taken ? checkIcon() : heartIcon(), taken ? 'Preso' : 'Libero') : null), el('h1', { class: 'dtitle' }, it.title));
     if (it.note) info.append(el('h3', { class: 'sec' }, 'Dettagli'), el('p', { class: 'full' }, it.note));
 
     if (opts.length > 1) {
@@ -293,13 +294,11 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
           : el('div', { class: 'ph', 'data-t': String((num + n) % 5), 'aria-hidden': 'true' }, giftIcon());
         if (oimg) thumb.addEventListener('error', () => thumb.replaceWith(el('div', { class: 'ph', 'data-t': String((num + n) % 5), 'aria-hidden': 'true' }, giftIcon())));
         const pic = el('div', { class: 'opt-pic' }, thumb);
-        const price = o.price || (!ourl ? 'Prezzo libero' : '');
         list.appendChild(el('div', { class: 'opt' + (!ourl && !oimg ? ' free' : '') },
           ourl ? el('a', { href: ourl, target: '_blank', rel: 'noopener noreferrer', 'aria-label': 'Apri ' + (o.label || 'stile ' + (n + 1)) }, pic) : pic,
           el('div', { class: 'opt-text' },
             el('div', { class: 'opt-info' },
               el('div', { class: 'opt-name' }, o.label || 'Stile ' + (n + 1)),
-              price ? el('div', { class: 'opt-price' }, price) : null,
               !ourl ? el('div', { class: 'opt-any' }, 'Va bene da qualsiasi negozio') : null),
             ourl ? el('a', { class: 'btn outline small', href: ourl, target: '_blank', rel: 'noopener noreferrer', 'aria-label': 'Vedi su ' + (shopOf(ourl) || 'il sito') }, 'Vedi su ' + (shopOf(ourl) || 'il sito'), arrowIcon()) : null)));
       });
@@ -313,15 +312,13 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     if (!taken) info.appendChild(el('p', { class: 'note-s' }, opts.length > 1
       ? 'Prenoti l\'idea intera: vale per tutti e ' + opts.length + ' gli stili. Poi compri quello che preferisci.'
       : 'Gli altri lo vedranno come già preso. Se cambi idea puoi annullare da questo stesso telefono.'));
-    const bbLabel = single ? 'Prezzo' : 'Scegli tra';
-    const bbValue = single ? (single.price || '—') : opts.length > 1 ? opts.length + ' stili' : '—';
     const bbAction = !taken
       ? el('button', { class: 'btn primary', type: 'button', onclick: () => reserveItem(it) }, heartIcon(), 'Lo prendo io')
       : mine
         ? el('button', { class: 'btn outline', type: 'button', onclick: () => releaseRes(it) }, 'Annulla')
         : el('span', { class: 'btn disabled' }, 'Preso');
     const bar = el('div', { class: 'buybar' }, el('div', { class: 'bb-in' },
-      el('div', { class: 'bb-price' }, el('span', { class: 'bb-l' }, taken ? (mine ? 'Hai scelto tu questo regalo' : 'Già scelto da qualcuno') : bbLabel), taken ? null : el('strong', null, bbValue)),
+      taken ? el('div', { class: 'bb-price' }, el('span', { class: 'bb-l' }, mine ? 'Hai scelto tu questo regalo' : 'Già scelto da qualcuno')) : null,
       bbAction));
     if (admin) info.appendChild(el('div', { class: 'admin-box' }, adminActions(it)));
     page.appendChild(info);
@@ -337,7 +334,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     media.appendChild(!taken
       ? el('button', { class: 'fab', type: 'button', 'aria-label': 'Lo prendo io: ' + it.title, title: 'Lo prendo io', onclick: (e) => { e.stopPropagation(); reserveItem(it); } }, heartIcon())
       : el('span', { class: 'fab ' + (mine ? 'on' : 'off'), 'aria-hidden': 'true' }, checkIcon()));
-    const body = el('div', { class: 'tbody' }, el('h2', null, el('button', { class: 'open', type: 'button', onclick: () => goDetail(it.id) }, it.title)));
+    const body = el('div', { class: 'tbody' }, el('div', { class: 'tcats' }, ...catsOf(it).map((c) => el('span', { class: 'chip-cat' }, c))), el('h2', null, el('button', { class: 'open', type: 'button', onclick: () => goDetail(it.id) }, it.title)));
     const price = opts.length > 1 ? null : (opts[0] && opts[0].price) || '';
     if (mine) body.appendChild(el('div', { class: 'meta mine-meta' }, el('strong', null, 'Lo regali tu'), ' · ', el('button', { class: 'linkbtn', type: 'button', 'aria-label': 'Annulla la prenotazione di ' + it.title, onclick: () => releaseRes(it) }, 'Annulla')));
     else if (taken) body.appendChild(el('span', { class: 'chip-taken' }, '✓ Preso'));

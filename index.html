@@ -106,6 +106,8 @@ body.is-admin header { padding-bottom: 0; }
 .admin-actions { grid-column: 1 / -1; display: flex; justify-content: space-between; border-top: 1px solid var(--line); margin: var(--s-1) calc(-1 * var(--s-3)) calc(-1 * var(--s-1)); padding-top: var(--s-1); }
 .admin-actions button { flex: 0 0 auto; min-height: 2.75rem; border: 0; background: transparent; font: 800 var(--fs-sm) var(--body); color: var(--ink); cursor: pointer; padding: 0 var(--s-3); white-space: nowrap; }
 .admin-actions .danger { color: var(--danger); }
+.opt-text .btn { max-width: 100%; white-space: normal; text-align: center; line-height: 1.2; padding-block: 0.4rem; }
+@media (max-width: 359px) { .admin-actions { flex-wrap: wrap; justify-content: center; } .admin-actions button { padding: 0 var(--s-2); font-size: 0.9375rem; } }
 .admin-box { margin-top: var(--s-2); background: var(--card); border-radius: var(--r-lg); box-shadow: var(--sh-card); padding: var(--s-1) var(--s-3); }
 .admin-box .admin-actions { margin: 0; border: 0; padding: 0; }
 .empty-card { background: var(--card); border-radius: var(--r-xl); box-shadow: var(--sh-card); padding: var(--s-8) var(--s-5); text-align: center; }

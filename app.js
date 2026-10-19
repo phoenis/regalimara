@@ -325,12 +325,12 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
       });
       info.appendChild(list);
     } else if (url) {
-      info.appendChild(el('a', { class: 'btn outline wide', href: url, target: '_blank', rel: 'noopener noreferrer' }, 'Dove comprarlo: ' + (shopOf(url) || 'vai al sito'), arrowIcon()));
+      info.appendChild(el('div', { class: 'buybox' }, el('h2', null, 'Dove comprarlo'),
+        el('a', { class: 'btn outline wide', href: url, target: '_blank', rel: 'noopener noreferrer' }, 'Vedi su ' + (shopOf(url) || 'il sito'), arrowIcon())));
     } else {
       info.appendChild(el('p', { class: 'hint-d' }, 'Per questa idea non c\'è un link: le foto servono a dare un\'idea.'));
     }
 
-    if (!taken && opts.length <= 1) info.appendChild(el('p', { class: 'note-s' }, 'Gli altri lo vedranno come già preso. Se cambi idea puoi annullare da questo stesso telefono.'));
     const bbAction = !taken
       ? el('button', { class: 'btn primary', type: 'button', onclick: () => reserveItem(it) }, heartIcon(), 'Lo prendo io')
       : mine

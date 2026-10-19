@@ -182,16 +182,16 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     }
     document.title = it.title + ' · Idee regalo per Mara';
     if (galFor !== id) { galFor = id; galIdx = 0; }
-    const vars = (it.variants || []).filter((v) => v.label || safeUrl(v.link) || safeImg(v.img));
-    // Con più stili non c'è una foto principale: ogni stile ha la sua, tutte uguali.
-    const imgs = vars.length ? (it.imgs || []).map(safeImg).filter(Boolean) : imgsOf(it);
+    const vars = it.variants || [];
+    // Con degli stili la pagina mostra solo i loro riquadri, tutti uguali: foto e link dell'idea si ignorano.
+    const imgs = vars.length ? [] : imgsOf(it);
     if (galIdx >= imgs.length) galIdx = 0;
     const taken = isTaken(it), isMine = isMineRes(it.id);
-    const url = safeUrl(it.link);
+    const url = vars.length ? '' : safeUrl(it.link);
 
     const main = mediaOf({ ...it, variants: [], imgs: imgs.length ? [imgs[galIdx]] : [] });
     const gallery = el('div', { class: 'gallery' }, main);
-    const showGallery = !vars.length || imgs.length > 0;
+    const showGallery = !vars.length;
     const go = (d) => { galIdx = (galIdx + d + imgs.length) % imgs.length; render(); };
     if (imgs.length > 1) {
       main.classList.add('swipe');
@@ -340,7 +340,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
       ...field('f-cat', 'Categoria', catSelect),
       ...field('f-price', 'Prezzo indicativo', el('input', { id: 'f-price', type: 'text', value: data.price, maxlength: '24' })),
       ...field('f-link', 'Link dove comprarlo (facoltativo)', el('input', { id: 'f-link', type: 'url', value: data.link, placeholder: 'https://' })),
-      el('label', null, 'Stili / varianti (facoltativo)'), el('p', { class: 'hint' }, 'Per più modelli della stessa idea: chi regala ne sceglie uno, la prenotazione vale per tutti.'), vBox, addVariant,
+      el('label', null, 'Stili / varianti (facoltativo)'), el('p', { class: 'hint' }, 'Per più modelli della stessa idea: chi regala ne sceglie uno, la prenotazione vale per tutti. Con degli stili, la foto e il link dell\'idea qui sotto non vengono mostrati nella pagina.'), vBox, addVariant,
       el('label', null, 'Foto (da link)'), imgBox,
       el('div', { class: 'inline' }, urlIn, el('button', { class: 'btn', type: 'button', onclick: addUrl }, 'Aggiungi')),
       imgMsg,

@@ -247,7 +247,9 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     box.replaceChildren(backLink(true));
     const single = opts.length === 1 ? opts[0] : null;
     // In cima la galleria con le foto di tutte le opzioni; sotto, la lista completa delle opzioni.
-    const imgs = [...new Set(opts.flatMap((o) => o.imgs).map(safeImg).filter(Boolean))];
+    const slides = [];
+    opts.forEach((o, n) => o.imgs.map(safeImg).filter(Boolean).forEach((src) => { if (!slides.some((s) => s.src === src)) slides.push({ src, label: o.label || 'Opzione ' + (n + 1) }); }));
+    const imgs = slides.map((s) => s.src);
     if (galFor !== id) { galFor = id; galIdx = Math.max(0, imgs.indexOf(safeImg(it.cover))); }
     if (galIdx >= imgs.length) galIdx = 0;
     const taken = isTaken(it), mine = isMineRes(it.id);
@@ -255,25 +257,45 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     const page = el('div', { class: 'dpage' });
 
     {
-      const main = mediaOf({ ...it, options: [{ imgs: imgs.length ? [imgs[galIdx]] : [] }] });
-      main.appendChild(!isTaken(it)
+      const status = !taken
         ? el('button', { class: 'fab top', type: 'button', 'aria-label': 'Libero: lo prendo io', title: 'Lo prendo io', onclick: () => reserveItem(it) }, heartIcon(), el('span', null, 'Libero'))
-        : el('span', { class: 'fab top ' + (isMineRes(it.id) ? 'on' : 'off') }, checkIcon(), el('span', null, 'Preso')));
-      const gallery = el('div', { class: 'gallery' + (isTaken(it) ? ' taken' : '') }, main);
-      const go = (d) => { galIdx = (galIdx + d + imgs.length) % imgs.length; render(); };
-      if (imgs.length > 1) {
-        main.classList.add('swipe');
-        main.append(
-          el('button', { class: 'gnav prev', type: 'button', 'aria-label': 'Foto precedente', onclick: () => go(-1) }, chevron(-1)),
-          el('button', { class: 'gnav next', type: 'button', 'aria-label': 'Foto successiva', onclick: () => go(1) }, chevron(1)),
-          el('span', { class: 'gcount' }, (galIdx + 1) + '/' + imgs.length));
-        let sx = null;
-        main.addEventListener('pointerdown', (e) => { sx = e.clientX; });
-        main.addEventListener('pointercancel', () => { sx = null; });
-        main.addEventListener('pointerup', (e) => { if (sx == null) return; const dx = e.clientX - sx; sx = null; if (Math.abs(dx) > 40) go(dx < 0 ? 1 : -1); });
-        gallery.appendChild(el('div', { class: 'gdots', 'aria-hidden': 'true' }, ...imgs.map((s, n) => el('span', { class: n === galIdx ? 'on' : '' }))));
-        gallery.appendChild(el('div', { class: 'gthumbs' }, ...imgs.map((src, n) =>
-          el('button', { type: 'button', 'aria-label': 'Foto ' + (n + 1), 'aria-current': String(n === galIdx), onclick: () => { galIdx = n; render(); } }, el('img', { src, alt: '', referrerpolicy: 'no-referrer' })))));
+        : el('span', { class: 'fab top ' + (mine ? 'on' : 'off') }, checkIcon(), el('span', null, 'Preso'));
+      const gallery = el('div', { class: 'gallery' + (taken ? ' taken' : '') });
+      if (!imgs.length) {
+        const main = mediaOf({ ...it, options: [{ imgs: [] }] });
+        main.appendChild(status);
+        gallery.appendChild(main);
+      } else {
+        const track = el('div', { class: 'track' }, ...slides.map((s) => {
+          const img = el('img', { src: s.src, alt: s.label, loading: 'lazy', draggable: 'false', referrerpolicy: 'no-referrer' });
+          return el('div', { class: 'slide' }, img);
+        }));
+        const main = el('div', { class: 'media gal' }, track, status);
+        gallery.appendChild(main);
+        const cap = opts.length > 1 ? el('span', { class: 'gcap' }, slides[galIdx].label) : null;
+        if (cap) main.appendChild(cap);
+        if (imgs.length > 1) {
+          const count = el('span', { class: 'gcount' }, (galIdx + 1) + '/' + imgs.length);
+          const dots = imgs.map((s, n) => el('span', { class: n === galIdx ? 'on' : '' }));
+          const thumbs = imgs.map((src, n) => el('button', { type: 'button', 'aria-label': 'Foto ' + (n + 1), 'aria-current': String(n === galIdx), onclick: () => goTo(n) }, el('img', { src, alt: '', referrerpolicy: 'no-referrer' })));
+          const goTo = (n) => track.scrollTo({ left: n * track.clientWidth, behavior: 'smooth' });
+          const step = (d) => goTo((galIdx + d + imgs.length) % imgs.length);
+          main.append(
+            el('button', { class: 'gnav prev', type: 'button', 'aria-label': 'Foto precedente', onclick: () => step(-1) }, chevron(-1)),
+            el('button', { class: 'gnav next', type: 'button', 'aria-label': 'Foto successiva', onclick: () => step(1) }, chevron(1)),
+            count);
+          track.addEventListener('scroll', () => {
+            const n = Math.min(imgs.length - 1, Math.max(0, Math.round(track.scrollLeft / track.clientWidth)));
+            if (n === galIdx) return;
+            galIdx = n;
+            count.textContent = (n + 1) + '/' + imgs.length;
+            if (cap) cap.textContent = slides[n].label;
+            dots.forEach((d, i) => { d.className = i === n ? 'on' : ''; });
+            thumbs.forEach((t, i) => t.setAttribute('aria-current', String(i === n)));
+          }, { passive: true });
+          gallery.append(el('div', { class: 'gdots', 'aria-hidden': 'true' }, ...dots), el('div', { class: 'gthumbs' }, ...thumbs));
+        }
+        requestAnimationFrame(() => { track.scrollLeft = galIdx * track.clientWidth; });
       }
       page.appendChild(gallery);
     }

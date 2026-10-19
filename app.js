@@ -303,7 +303,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     if (!taken) {
       panel.append(
         el('button', { class: 'btn primary wide', type: 'button', onclick: () => reserveItem(it) }, heartIcon(), 'Lo prendo io'),
-        buyBtn && wideScreen.matches ? buyBtn : null,
+        ...(buyBtn && wideScreen.matches ? [buyBtn] : []),
         el('p', { class: 'note' }, opts.length > 1
           ? 'Prenoti l\'idea intera: vale per tutti e ' + opts.length + ' gli stili. Poi compri quello che preferisci.'
           : 'Gli altri lo vedranno come già preso. Se cambi idea puoi annullare da questo stesso telefono.'));

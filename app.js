@@ -146,14 +146,21 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
   }
 
   // ---------- schede ----------
-  function heartIcon() {
+  function svgIcon(...paths) {
     const ns = 'http://www.w3.org/2000/svg';
     const svg = document.createElementNS(ns, 'svg');
-    svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('aria-hidden', 'true'); svg.setAttribute('class', 'heart');
-    const p = document.createElementNS(ns, 'path');
-    p.setAttribute('d', 'M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3.2.9-4.5 2.5C10.7 3.9 9.300 3 7.500 3A5.500 5.500 0 0 0 2 8.500c0 2.300 1.500 4 3 5.500l7 7z');
-    svg.appendChild(p);
+    svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('aria-hidden', 'true'); svg.setAttribute('class', 'ico');
+    paths.forEach(([tag, attrs]) => { const n = document.createElementNS(ns, tag); Object.entries(attrs).forEach(([k, v]) => n.setAttribute(k, v)); svg.appendChild(n); });
     return svg;
+  }
+  // regalo: idea ancora libera
+  function heartIcon() {
+    return svgIcon(['rect', { x: 3, y: 8, width: 18, height: 4, rx: 1 }], ['path', { d: 'M5 12v9h14v-9M12 8v13' }],
+      ['path', { d: 'M12 8H7.5a2.5 2.5 0 1 1 2.5-2.5C10 7 12 8 12 8Z' }], ['path', { d: 'M12 8h4.5A2.5 2.5 0 1 0 14 5.5C14 7 12 8 12 8Z' }]);
+  }
+  // spunta: idea prenotata
+  function checkIcon() {
+    return svgIcon(['circle', { cx: 12, cy: 12, r: 9 }], ['path', { d: 'm8 12 2.5 2.5L16 9' }]);
   }
 
   function giftIcon() {
@@ -251,8 +258,8 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
       const main = mediaOf({ ...it, options: [{ imgs: imgs.length ? [imgs[galIdx]] : [] }] });
       main.appendChild(!isTaken(it)
         ? el('button', { class: 'fab top', type: 'button', 'aria-label': 'Lo prendo io', title: 'Lo prendo io', onclick: () => reserveItem(it) }, heartIcon())
-        : el('span', { class: 'fab top ' + (isMineRes(it.id) ? 'on' : 'off'), 'aria-hidden': 'true' }, heartIcon()));
-      const gallery = el('div', { class: 'gallery' }, main);
+        : el('span', { class: 'fab top ' + (isMineRes(it.id) ? 'on' : 'off'), 'aria-hidden': 'true' }, checkIcon()));
+      const gallery = el('div', { class: 'gallery' + (isTaken(it) ? ' taken' : '') }, main);
       const go = (d) => { galIdx = (galIdx + d + imgs.length) % imgs.length; render(); };
       if (imgs.length > 1) {
         main.classList.add('swipe');
@@ -321,7 +328,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     box.append(page, bar);
   }
 
-  // Scheda dell'elenco: foto su riquadro chiaro, cuore sull'angolo, titolo e prezzo sotto.
+  // Scheda dell'elenco: foto su riquadro chiaro, regalo sull'angolo, titolo e prezzo sotto.
   function tileFor(it) {
     const taken = isTaken(it), mine = isMineRes(it.id), opts = it.options;
     const tile = el('article', { class: 'tile' + (taken && !mine ? ' done' : '') + (mine ? ' mine' : '') });
@@ -329,7 +336,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     media.addEventListener('click', () => goDetail(it.id));
     media.appendChild(!taken
       ? el('button', { class: 'fab', type: 'button', 'aria-label': 'Lo prendo io: ' + it.title, title: 'Lo prendo io', onclick: (e) => { e.stopPropagation(); reserveItem(it); } }, heartIcon())
-      : el('span', { class: 'fab ' + (mine ? 'on' : 'off'), 'aria-hidden': 'true' }, heartIcon()));
+      : el('span', { class: 'fab ' + (mine ? 'on' : 'off'), 'aria-hidden': 'true' }, checkIcon()));
     const body = el('div', { class: 'tbody' }, el('h2', null, el('button', { class: 'open', type: 'button', onclick: () => goDetail(it.id) }, it.title)));
     const price = opts.length > 1 ? null : (opts[0] && opts[0].price) || '';
     if (mine) body.appendChild(el('div', { class: 'meta mine-meta' }, el('strong', null, 'Lo regali tu'), ' · ', el('button', { class: 'linkbtn', type: 'button', 'aria-label': 'Annulla la prenotazione di ' + it.title, onclick: () => releaseRes(it) }, 'Annulla')));
@@ -395,7 +402,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
       card.appendChild(body);
       if (admin) card.appendChild(adminActions(it));
       else if (!taken) card.appendChild(el('button', { class: 'round', type: 'button', 'aria-label': 'Lo prendo io: ' + it.title, title: 'Lo prendo io', onclick: () => reserveItem(it) }, heartIcon()));
-      else card.appendChild(el('span', { class: 'round ' + (mine ? 'on' : 'off'), 'aria-hidden': 'true' }, heartIcon()));
+      else card.appendChild(el('span', { class: 'round ' + (mine ? 'on' : 'off'), 'aria-hidden': 'true' }, checkIcon()));
       grid.appendChild(card);
     });
     const open = state.items.filter((i) => !isTaken(i)).length;

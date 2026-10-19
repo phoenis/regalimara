@@ -325,7 +325,10 @@ body.is-admin .grid { display: flex; flex-direction: column; max-width: 40rem; m
 .sk-media { aspect-ratio: 1 / 1.08; border-radius: var(--r-md); }
 .fab { position: absolute; right: 0.5rem; bottom: 0.5rem; width: 2rem; height: 2rem; border-radius: 50%; border: 0; background: rgba(255,255,255,.92); color: var(--ink); display: grid; place-items: center; cursor: pointer; box-shadow: none; z-index: 2; }
 .fab .ico { width: 1rem; height: 1rem; fill: none; stroke: currentColor; }
-.tile .fab { right: 0; bottom: 0; width: auto; height: auto; padding: 0.375rem 0 0 0.375rem; background: #fff; border-radius: 1.25rem 0 0 0; box-shadow: none; }
+.tile .fab { --fr: 0.875rem; right: 0; bottom: 0; width: auto; height: auto; padding: 0.4rem 0 0 0.4rem; background: #fff; border-radius: 1.6rem 0 0 0; box-shadow: none; }
+.tile .fab::before, .tile .fab::after { content: ""; position: absolute; width: var(--fr); height: var(--fr); background: radial-gradient(circle at 0 0, transparent calc(var(--fr) - 0.5px), #fff var(--fr)); pointer-events: none; }
+.tile .fab::before { left: calc(var(--fr) * -1); bottom: 0; }
+.tile .fab::after { right: 0; top: calc(var(--fr) * -1); }
 .tile .fab .ico { box-sizing: content-box; width: 1.125rem; height: 1.125rem; padding: 0.625rem; border-radius: 50%; background: var(--tile); }
 .tile .media { overflow: hidden; position: relative; }
 .fab.on { color: var(--ink); cursor: default; }
@@ -378,7 +381,7 @@ body.is-admin .grid { display: flex; flex-direction: column; max-width: 40rem; m
 <!-- Idee mostrate solo finché config.js non è compilato (modalità prova). Con Firebase le idee vivono nel database. -->
 <script type="application/json" id="data">{"items":[]}</script>
 
-<script src="config.js?v=202610191259"></script>
-<script type="module" src="app.js?v=202610191259"></script>
+<script src="config.js?v=202610191300"></script>
+<script type="module" src="app.js?v=202610191300"></script>
 </body>
 </html>

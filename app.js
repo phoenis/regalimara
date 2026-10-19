@@ -41,7 +41,11 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     for (const kid of kids) if (kid != null) n.append(kid);
     return n;
   }
-  const cats = () => [...new Set(state.items.map((i) => i.cat).filter(Boolean))];
+  // Categorie ammesse, nell'ordine in cui compaiono nei filtri. Per aggiungerne una basta scriverla qui.
+  const CATEGORIE = ['Casa', 'Cucina', 'Fai da te', 'Creatività', 'Benessere', 'Esperienze', 'Libri', 'Moda e accessori', 'Altro'];
+  const catOf = (it) => (CATEGORIE.includes(it.cat) ? it.cat : 'Altro');
+  // Nei filtri solo le categorie che hanno almeno un'idea.
+  const cats = () => CATEGORIE.filter((c) => state.items.some((i) => catOf(i) === c));
   const safeUrl = (u) => /^https?:\/\//i.test(u || '') ? u : '';
   const safeImg = (u) => /^(https:\/\/|img\/[\w.-]+$)/i.test(u || '') ? u : '';
   const hostOf = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return ''; } };
@@ -201,7 +205,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
       el('button', { type: 'button', 'aria-label': 'Foto ' + (n + 1), 'aria-current': String(n === galIdx), onclick: () => { galIdx = n; render(); } }, el('img', { src, alt: '', referrerpolicy: 'no-referrer' })))));
 
     const info = el('div', { class: 'info' });
-    info.append(el('span', { class: 'cat' }, it.cat || 'Varie'), el('h1', { class: 'dtitle' }, it.title));
+    info.append(el('span', { class: 'cat' }, catOf(it)), el('h1', { class: 'dtitle' }, it.title));
     if (it.price) info.appendChild(el('div', { class: 'price' }, it.price));
     if (it.note) info.appendChild(el('p', { class: 'full' }, it.note));
     const vars = (it.variants || []).filter((v) => v.label || safeUrl(v.link));
@@ -238,7 +242,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     const chips = $('chips'); chips.replaceChildren();
     ['Tutte', ...cats()].forEach((c) => chips.appendChild(el('button', { class: 'chip', type: 'button', 'aria-pressed': String(c === filter), onclick: () => { filter = c; render(); } }, c)));
 
-    const list = state.items.filter((i) => filter === 'Tutte' || i.cat === filter);
+    const list = state.items.filter((i) => filter === 'Tutte' || catOf(i) === filter);
     const grid = $('grid'); grid.replaceChildren();
     if (state.loading) grid.appendChild(el('div', { class: 'loading' }, 'Carico le idee…'));
     else if (state.error) grid.appendChild(el('div', { class: 'empty' }, 'Non riesco a caricare le idee. Riprova tra poco.'));
@@ -295,7 +299,8 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
   function editItem(it) {
     const isNew = !it;
     const data = it || { id: 'i' + Date.now().toString(36), title: '', note: '', cat: filter !== 'Tutte' ? filter : '', price: '', link: '', imgs: [], done: false };
-    const dl = el('datalist', { id: 'f-cats' }, ...cats().map((c) => el('option', { value: c })));
+    const catSelect = el('select', { id: 'f-cat' }, el('option', { value: '' }, 'Scegli una categoria'), ...CATEGORIE.map((c) => el('option', { value: c }, c)));
+    catSelect.value = isNew ? (CATEGORIE.includes(filter) ? filter : '') : catOf(data);
     const variants = (data.variants || []).map((v) => ({ ...v }));
     const vBox = el('div', { class: 'vlist' });
     function drawVariants() {
@@ -334,7 +339,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     modal(isNew ? 'Nuova idea' : 'Modifica idea', [
       ...field('f-title', 'Titolo', el('input', { id: 'f-title', type: 'text', value: data.title, maxlength: '80' })),
       ...field('f-note', 'Descrizione', el('textarea', { id: 'f-note', rows: '3', maxlength: '240' }, data.note)),
-      ...field('f-cat', 'Categoria', el('input', { id: 'f-cat', type: 'text', value: data.cat, list: 'f-cats', maxlength: '24' })), dl,
+      ...field('f-cat', 'Categoria', catSelect),
       ...field('f-price', 'Prezzo indicativo', el('input', { id: 'f-price', type: 'text', value: data.price, maxlength: '24' })),
       ...field('f-link', 'Link dove comprarlo (facoltativo)', el('input', { id: 'f-link', type: 'url', value: data.link, placeholder: 'https://' })),
       el('label', null, 'Stili / varianti (facoltativo)'), el('p', { class: 'hint' }, 'Per più modelli della stessa idea: chi regala ne sceglie uno, la prenotazione vale per tutti.'), vBox, addVariant,
@@ -345,6 +350,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     ], async (form, close) => {
       const v = (id) => form.querySelector('#' + id).value.trim();
       if (!v('f-title')) return 'Scrivi almeno il titolo.';
+      if (!v('f-cat')) return 'Scegli una categoria.';
       if (v('f-link') && !safeUrl(v('f-link'))) return 'Il link deve iniziare con http:// o https://';
       for (const v of variants) {
         if (v.link && !safeUrl(v.link.trim())) return 'Il link di uno stile deve iniziare con http:// o https://';

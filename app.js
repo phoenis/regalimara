@@ -47,7 +47,10 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
   const hostOf = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return ''; } };
   const isTaken = (it) => it.done || state.reserved.has(it.id);
   const MAX_IMGS = 4;
-  const norm = (d) => ({ ...d, imgs: Array.isArray(d.imgs) ? d.imgs : [] });
+  const norm = (d) => ({ ...d, imgs: Array.isArray(d.imgs) ? d.imgs : [], variants: Array.isArray(d.variants) ? d.variants : [] });
+  const MAX_VARIANTS = 8;
+  // Tutte le foto di un'idea: quelle dell'idea e poi quelle degli stili, senza doppioni.
+  const imgsOf = (it) => [...new Set([...(it.imgs || []), ...(it.variants || []).map((v) => v.img)].map(safeImg).filter(Boolean))];
 
   function toast(text) {
     const t = el('div', { class: 'toast', role: 'status' }, text);
@@ -128,7 +131,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
   }
 
   function mediaOf(it) {
-    const imgs = (it.imgs || []).map(safeImg).filter(Boolean);
+    const imgs = imgsOf(it);
     const media = el('div', { class: 'media' });
     const ar = ['4 / 3', '1 / 1', '3 / 4', '5 / 4'][(parseInt(String(it.id).replace(/\D/g, ''), 10) || 0) % 4];
     const num = parseInt(String(it.id).replace(/\D/g, ''), 10) || 0;
@@ -175,12 +178,25 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     }
     document.title = it.title + ' · Idee regalo per Mara';
     if (galFor !== id) { galFor = id; galIdx = 0; }
-    const imgs = (it.imgs || []).map(safeImg).filter(Boolean);
+    const imgs = imgsOf(it);
     if (galIdx >= imgs.length) galIdx = 0;
     const taken = isTaken(it), isMine = isMineRes(it.id);
     const url = safeUrl(it.link);
 
-    const gallery = el('div', { class: 'gallery' }, mediaOf({ ...it, imgs: imgs.length ? [imgs[galIdx]] : [] }));
+    const main = mediaOf({ ...it, variants: [], imgs: imgs.length ? [imgs[galIdx]] : [] });
+    const gallery = el('div', { class: 'gallery' }, main);
+    const go = (d) => { galIdx = (galIdx + d + imgs.length) % imgs.length; render(); };
+    if (imgs.length > 1) {
+      main.classList.add('swipe');
+      main.append(
+        el('button', { class: 'gnav prev', type: 'button', 'aria-label': 'Foto precedente', onclick: () => go(-1) }, '‹'),
+        el('button', { class: 'gnav next', type: 'button', 'aria-label': 'Foto successiva', onclick: () => go(1) }, '›'),
+        el('span', { class: 'gcount' }, (galIdx + 1) + ' / ' + imgs.length));
+      let sx = null;
+      main.addEventListener('pointerdown', (e) => { sx = e.clientX; });
+      main.addEventListener('pointercancel', () => { sx = null; });
+      main.addEventListener('pointerup', (e) => { if (sx == null) return; const dx = e.clientX - sx; sx = null; if (Math.abs(dx) > 40) go(dx < 0 ? 1 : -1); });
+    }
     if (imgs.length > 1) gallery.appendChild(el('div', { class: 'gthumbs' }, ...imgs.map((src, n) =>
       el('button', { type: 'button', 'aria-label': 'Foto ' + (n + 1), 'aria-current': String(n === galIdx), onclick: () => { galIdx = n; render(); } }, el('img', { src, alt: '', referrerpolicy: 'no-referrer' })))));
 
@@ -188,9 +204,26 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     info.append(el('span', { class: 'cat' }, it.cat || 'Varie'), el('h1', { class: 'dtitle' }, it.title));
     if (it.price) info.appendChild(el('div', { class: 'price' }, it.price));
     if (it.note) info.appendChild(el('p', { class: 'full' }, it.note));
+    const vars = (it.variants || []).filter((v) => v.label || safeUrl(v.link));
+    if (vars.length) {
+      const list = el('div', { class: 'variants' }, el('h2', null, vars.length > 1 ? 'Scegli lo stile che preferisci' : 'Dove trovarlo'));
+      vars.forEach((v) => {
+        const vi = imgs.indexOf(safeImg(v.img));
+        const thumb = safeImg(v.img)
+          ? el('button', { class: 'vthumb', type: 'button', 'aria-label': 'Mostra la foto: ' + (v.label || 'stile'), onclick: () => { if (vi >= 0) { galIdx = vi; render(); } } }, el('img', { src: safeImg(v.img), alt: '', referrerpolicy: 'no-referrer' }))
+          : el('div', { class: 'vthumb' }, giftIcon());
+        const vurl = safeUrl(v.link);
+        list.appendChild(el('div', { class: 'variant' }, thumb,
+          el('div', { class: 'vtext' },
+            el('div', { class: 'vname' }, v.label || 'Stile', v.fav ? el('span', { class: 'fav' }, 'Il mio preferito') : null),
+            v.price ? el('div', { class: 'vprice' }, v.price) : null,
+            vurl ? el('a', { class: 'btn vlink', href: vurl, target: '_blank', rel: 'noopener noreferrer' }, 'Vedi su ' + (hostOf(vurl) || 'il sito') + ' ↗') : null)));
+      });
+      info.appendChild(list);
+    }
     if (taken) info.appendChild(el('p', { class: 'taken' }, isMine ? 'Hai scelto tu questo regalo.' : 'Qualcuno ha già scelto questo regalo.'));
     if (url) info.appendChild(el('a', { class: 'btn ' + (taken ? '' : 'primary') + ' wide', href: url, target: '_blank', rel: 'noopener noreferrer' }, 'Dove comprarlo: ' + (hostOf(url) || 'vai al sito') + ' ↗'));
-    else info.appendChild(el('p', { class: 'hint-d' }, 'Per questa idea non c\'è un link: le foto servono a dare un\'idea.'));
+    else if (!vars.some((v) => safeUrl(v.link))) info.appendChild(el('p', { class: 'hint-d' }, 'Per questa idea non c\'è un link: le foto servono a dare un\'idea.'));
     if (!taken) info.appendChild(el('button', { class: 'btn ' + (url ? '' : 'primary') + ' wide', type: 'button', onclick: () => reserveItem(it) }, 'Lo prendo io'));
     else if (isMine) info.appendChild(el('button', { class: 'btn quiet wide', type: 'button', onclick: () => releaseRes(it) }, 'Annulla, non lo prendo più'));
     if (admin) info.appendChild(adminActions(it));
@@ -217,7 +250,8 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
       media.addEventListener('click', () => goDetail(it.id));
       card.appendChild(media);
       const body = el('div', { class: 'body' }, el('h2', null, el('button', { class: 'open', type: 'button', onclick: () => goDetail(it.id) }, it.title)));
-      if (it.price) body.appendChild(el('div', { class: 'price' }, it.price));
+      const nv = (it.variants || []).length;
+      if (it.price || nv > 1) body.appendChild(el('div', { class: 'price' }, it.price || '', nv > 1 ? el('span', { class: 'styles' }, (it.price ? ' · ' : '') + nv + ' stili') : null));
       card.appendChild(body);
       if (!taken) card.appendChild(el('button', { class: 'round', type: 'button', 'aria-label': 'Lo prendo io: ' + it.title, title: 'Lo prendo io', onclick: () => reserveItem(it) }, heartIcon()));
       else if (isMine) card.appendChild(el('button', { class: 'pill', type: 'button', 'aria-label': 'Annulla la prenotazione di ' + it.title, onclick: () => releaseRes(it) }, 'Annulla'));
@@ -262,6 +296,21 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     const isNew = !it;
     const data = it || { id: 'i' + Date.now().toString(36), title: '', note: '', cat: filter !== 'Tutte' ? filter : '', price: '', link: '', imgs: [], done: false };
     const dl = el('datalist', { id: 'f-cats' }, ...cats().map((c) => el('option', { value: c })));
+    const variants = (data.variants || []).map((v) => ({ ...v }));
+    const vBox = el('div', { class: 'vlist' });
+    function drawVariants() {
+      vBox.replaceChildren(...variants.map((v, n) => {
+        const inp = (ph, key, type) => { const i = el('input', { type: type || 'text', placeholder: ph, value: v[key] || '', 'aria-label': ph }); i.addEventListener('input', () => { v[key] = i.value; }); return i; };
+        const fav = el('input', { type: 'checkbox' }); fav.checked = !!v.fav;
+        fav.addEventListener('change', () => { variants.forEach((x) => { x.fav = false; }); v.fav = fav.checked; drawVariants(); });
+        return el('div', { class: 'vedit' },
+          inp('Nome dello stile (es. Verde salvia)', 'label'), inp('Prezzo (es. 29 €)', 'price'), inp('Link dove comprarlo https://…', 'link', 'url'), inp('Foto: indirizzo immagine https://…', 'img', 'url'),
+          el('label', { class: 'favlabel' }, fav, ' Il mio preferito'),
+          el('button', { class: 'btn danger', type: 'button', onclick: () => { variants.splice(n, 1); drawVariants(); } }, 'Rimuovi stile'));
+      }));
+    }
+    const addVariant = el('button', { class: 'btn', type: 'button', onclick: () => { if (variants.length >= MAX_VARIANTS) { toast('Massimo ' + MAX_VARIANTS + ' stili'); return; } variants.push({ label: '', price: '', link: '', img: '', fav: false }); drawVariants(); } }, 'Aggiungi uno stile');
+    drawVariants();
     const imgs = (data.imgs || []).slice();
     const imgBox = el('div', { class: 'imgs' });
     const imgMsg = el('p', { class: 'hint' });
@@ -288,6 +337,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
       ...field('f-cat', 'Categoria', el('input', { id: 'f-cat', type: 'text', value: data.cat, list: 'f-cats', maxlength: '24' })), dl,
       ...field('f-price', 'Prezzo indicativo', el('input', { id: 'f-price', type: 'text', value: data.price, maxlength: '24' })),
       ...field('f-link', 'Link dove comprarlo (facoltativo)', el('input', { id: 'f-link', type: 'url', value: data.link, placeholder: 'https://' })),
+      el('label', null, 'Stili / varianti (facoltativo)'), el('p', { class: 'hint' }, 'Per più modelli della stessa idea: chi regala ne sceglie uno, la prenotazione vale per tutti.'), vBox, addVariant,
       el('label', null, 'Foto (da link)'), imgBox,
       el('div', { class: 'inline' }, urlIn, el('button', { class: 'btn', type: 'button', onclick: addUrl }, 'Aggiungi')),
       imgMsg,
@@ -296,7 +346,12 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
       const v = (id) => form.querySelector('#' + id).value.trim();
       if (!v('f-title')) return 'Scrivi almeno il titolo.';
       if (v('f-link') && !safeUrl(v('f-link'))) return 'Il link deve iniziare con http:// o https://';
-      const { id, ...row } = { id: data.id, title: v('f-title'), note: v('f-note'), cat: v('f-cat'), price: v('f-price'), link: v('f-link'), imgs: imgs.slice(), done: !!data.done, createdAt: data.createdAt || Date.now() };
+      for (const v of variants) {
+        if (v.link && !safeUrl(v.link.trim())) return 'Il link di uno stile deve iniziare con http:// o https://';
+        if (v.img && !safeImg(v.img.trim())) return 'La foto di uno stile deve essere un indirizzo https://';
+      }
+      const cleanVariants = variants.map((v) => ({ label: (v.label || '').trim(), price: (v.price || '').trim(), link: (v.link || '').trim(), img: (v.img || '').trim(), fav: !!v.fav })).filter((v) => v.label || v.link || v.img);
+      const { id, ...row } = { id: data.id, title: v('f-title'), note: v('f-note'), cat: v('f-cat'), price: v('f-price'), link: v('f-link'), imgs: imgs.slice(), variants: cleanVariants, done: !!data.done, createdAt: data.createdAt || Date.now() };
       try { await setDoc(doc(db, 'ideas', id), row); } catch (e) { return 'Salvataggio non riuscito. Sei ancora dentro?'; }
       close();
     }, 'Salva idea');

@@ -403,7 +403,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
         if (now !== i.cat) batch.update(doc(db, 'ideas', i.id), { cat: now });
       });
       batch.set(doc(db, 'settings', 'categories'), { list: names, updatedAt: Date.now() });
-      try { await batch.commit(); } catch (e) { return 'Salvataggio non riuscito. Hai pubblicato le nuove regole di Firestore?'; }
+      try { await batch.commit(); } catch (e) { console.error(e); return 'Salvataggio non riuscito (' + ((e && e.code) || 'errore') + '). ' + (e && e.code === 'permission-denied' ? 'Le regole di Firestore non ti riconoscono come proprietario: controlla che nelle regole ci sia il tuo UID e non "IL-TUO-UID".' : ''); }
       close(); toast('Categorie salvate');
     }, 'Salva categorie');
   }
@@ -435,7 +435,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
   function editItem(it) {
     const isNew = !it;
     const data = it || { id: 'i' + Date.now().toString(36), title: '', note: '', cat: filter !== 'Tutte' ? filter : '', options: [], done: false };
-    const catSelect = el('select', { id: 'f-cat' }, el('option', { value: '' }, 'Scegli una categoria'), ...CATEGORIE.map((c) => el('option', { value: c }, c)));
+    const catSelect = el('select', { id: 'f-cat' }, el('option', { value: '' }, 'Scegli una categoria'), ...[...CATEGORIE.filter((c) => c !== 'Altro')].sort((x, y) => x.localeCompare(y, 'it', { sensitivity: 'base' })).concat('Altro').map((c) => el('option', { value: c }, c)));
     catSelect.value = isNew ? (CATEGORIE.includes(filter) ? filter : '') : catOf(data);
     let cover = safeImg(data.cover) || '';
     const options = data.options.map((o) => ({ ...o, imgs: o.imgs.slice() }));
@@ -493,7 +493,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
       }
       const clean = options.map((o) => ({ label: (o.label || '').trim(), price: (o.price || '').trim(), link: (o.link || '').trim(), imgs: o.imgs.slice() })).filter((o) => o.label || o.price || o.link || o.imgs.length);
       const { id, ...row } = { id: data.id, title: v('f-title'), note: v('f-note'), cat: v('f-cat'), options: clean, cover: clean.some((o) => o.imgs.includes(cover)) ? cover : '', done: !!data.done, createdAt: data.createdAt || Date.now() };
-      try { await setDoc(doc(db, 'ideas', id), row); } catch (e) { return 'Salvataggio non riuscito. Sei ancora dentro?'; }
+      try { await setDoc(doc(db, 'ideas', id), row); } catch (e) { console.error(e); return 'Salvataggio non riuscito (' + ((e && e.code) || 'errore') + '). ' + (e && e.code === 'permission-denied' ? 'Le regole di Firestore non ti riconoscono come proprietario: controlla che nelle regole ci sia il tuo UID e non "IL-TUO-UID".' : 'Sei ancora dentro?'); }
       close();
     }, 'Salva idea');
   }

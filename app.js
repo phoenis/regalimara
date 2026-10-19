@@ -46,9 +46,15 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
   const CATEGORIE_BASE = ['Casa', 'Cucina', 'Fai da te', 'Creatività', 'Benessere', 'Esperienze', 'Libri', 'Moda e accessori'];
   let CATEGORIE = [...CATEGORIE_BASE, 'Altro'];
   const setCategorie = (list) => { CATEGORIE = [...list.filter((c) => c !== 'Altro'), 'Altro']; };
-  const catOf = (it) => (CATEGORIE.includes(it.cat) ? it.cat : 'Altro');
+  // Categorie di un'idea: quelle scelte (cats) oppure la vecchia singola (cat); nessuna valida = "Altro".
+  const catsOf = (it) => {
+    const raw = Array.isArray(it.cats) ? it.cats : it.cat ? [it.cat] : [];
+    const ok = [...new Set(raw.filter((c) => CATEGORIE.includes(c)))];
+    return ok.length ? ok : ['Altro'];
+  };
+  const sortedCats = () => [...CATEGORIE.filter((c) => c !== 'Altro')].sort((x, y) => x.localeCompare(y, 'it', { sensitivity: 'base' })).concat('Altro');
   // Nei filtri solo le categorie che hanno almeno un'idea.
-  const cats = () => CATEGORIE.filter((c) => state.items.some((i) => catOf(i) === c));
+  const cats = () => CATEGORIE.filter((c) => state.items.some((i) => catsOf(i).includes(c)));
   const safeUrl = (u) => /^https?:\/\//i.test(u || '') ? u : '';
   const safeImg = (u) => /^(https:\/\/|img\/[\w.-]+$)/i.test(u || '') ? u : '';
   // Nome del negozio da mostrare sul pulsante (i link corti di Amazon hanno un dominio incomprensibile).
@@ -266,7 +272,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
 
     let buyBtn = null;
     const info = el('div', { class: 'dinfo' });
-    info.append(el('span', { class: 'chip-cat' }, catOf(it)), el('h1', { class: 'dtitle' }, it.title));
+    info.append(el('div', { class: 'cat-chips' }, ...catsOf(it).map((c) => el('span', { class: 'chip-cat' }, c))), el('h1', { class: 'dtitle' }, it.title));
     if (single && single.price) info.appendChild(el('div', { class: 'dprice' }, single.price));
     if (it.note) info.appendChild(el('p', { class: 'full' }, it.note));
 
@@ -329,7 +335,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     const chips = $('chips'); chips.replaceChildren();
     ['Tutte', ...cats()].forEach((c) => chips.appendChild(el('button', { class: 'chip', type: 'button', 'aria-pressed': String(c === filter), onclick: () => { filter = c; render(); } }, c)));
 
-    const list = state.items.filter((i) => filter === 'Tutte' || catOf(i) === filter);
+    const list = state.items.filter((i) => filter === 'Tutte' || catsOf(i).includes(filter));
     const grid = $('grid'); grid.replaceChildren();
     if (state.loading) {
       grid.appendChild(el('p', { class: 'loading', role: 'status' }, 'Carico le idee…'));
@@ -396,7 +402,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
   function manageCats() {
     const rows = CATEGORIE.filter((c) => c !== 'Altro').map((c) => ({ orig: c, name: c }));
     const box = el('div', { class: 'catlist' });
-    const usage = (c) => state.items.filter((i) => catOf(i) === c).length;
+    const usage = (c) => state.items.filter((i) => catsOf(i).includes(c)).length;
     const draw = () => {
       box.replaceChildren(...rows.map((r, n) => {
         const input = el('input', { type: 'text', value: r.name, maxlength: '24', 'aria-label': 'Nome della categoria ' + (n + 1) });
@@ -428,10 +434,9 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
       const toNew = new Map(rows.filter((r) => r.orig).map((r) => [r.orig, r.name.trim()]));
       const batch = writeBatch(db);
       state.items.forEach((i) => {
-        const was = catOf(i);
-        if (was === 'Altro') return;
-        const now = toNew.has(was) ? toNew.get(was) : 'Altro';
-        if (now !== i.cat) batch.update(doc(db, 'ideas', i.id), { cat: now });
+        const was = catsOf(i);
+        const now = [...new Set(was.map((c) => (c === 'Altro' ? c : toNew.has(c) ? toNew.get(c) : 'Altro')))];
+        if (JSON.stringify(now) !== JSON.stringify(was)) batch.update(doc(db, 'ideas', i.id), { cats: now });
       });
       batch.set(doc(db, 'settings', 'categories'), { list: names, updatedAt: Date.now() });
       try { await batch.commit(); } catch (e) { console.error(e); return 'Salvataggio non riuscito (' + ((e && e.code) || 'errore') + '). ' + (e && e.code === 'permission-denied' ? 'Le regole di Firestore non ti riconoscono come proprietario: controlla che nelle regole ci sia il tuo UID e non "IL-TUO-UID".' : ''); }
@@ -466,9 +471,15 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
 
   function editItem(it) {
     const isNew = !it;
-    const data = it || { id: 'i' + Date.now().toString(36), title: '', note: '', cat: filter !== 'Tutte' ? filter : '', options: [], done: false };
-    const catSelect = el('select', { id: 'f-cat' }, el('option', { value: '' }, 'Scegli una categoria'), ...[...CATEGORIE.filter((c) => c !== 'Altro')].sort((x, y) => x.localeCompare(y, 'it', { sensitivity: 'base' })).concat('Altro').map((c) => el('option', { value: c }, c)));
-    catSelect.value = isNew ? (CATEGORIE.includes(filter) ? filter : '') : catOf(data);
+    const data = it || { id: 'i' + Date.now().toString(36), title: '', note: '', cats: CATEGORIE.includes(filter) ? [filter] : [], options: [], done: false };
+    const picked = new Set(isNew ? data.cats : catsOf(data));
+    const catPick = el('div', { class: 'catpick', role: 'group', 'aria-label': 'Categorie' }, ...sortedCats().map((c) => {
+      const box = el('input', { type: 'checkbox', value: c });
+      box.checked = picked.has(c);
+      box.addEventListener('change', () => { if (box.checked) picked.add(c); else picked.delete(c); label.classList.toggle('on', box.checked); });
+      const label = el('label', { class: 'pickchip' + (box.checked ? ' on' : '') }, box, el('span', null, c));
+      return label;
+    }));
     let cover = safeImg(data.cover) || '';
     const options = data.options.map((o) => ({ ...o, imgs: o.imgs.slice() }));
     if (!options.length) options.push({ label: '', price: '', link: '', imgs: [] });
@@ -512,19 +523,19 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     modal(isNew ? 'Nuova idea' : 'Modifica idea', [
       ...field('f-title', 'Titolo', el('input', { id: 'f-title', type: 'text', value: data.title, maxlength: '80' })),
       ...field('f-note', 'Descrizione', el('textarea', { id: 'f-note', rows: '3', maxlength: '240' }, data.note)),
-      ...field('f-cat', 'Categoria', catSelect),
+      el('p', { class: 'field-label' }, 'Categorie', el('span', null, ' · una o più')), catPick,
+      el('p', { class: 'hint' }, 'L\'idea compare sotto ogni categoria scelta. Nessuna scelta = «Altro».'),
       el('label', null, 'Opzioni (stili, modelli, negozi)'),
       el('p', { class: 'hint' }, 'Tocca la ☆ su una foto per sceglierla come copertina: è quella che si vede nell\'elenco. Le opzioni sono tutte allo stesso livello: chi regala ne sceglie una e la prenotazione vale per l\'idea intera. Con una sola opzione la pagina mostra la sua galleria di foto. Da Pinterest, Amazon o Etsy: tieni premuto sulla foto (sul computer, tasto destro), scegli "Copia indirizzo immagine" e incollalo.'),
       oBox, addOption,
     ], async (form, close) => {
       const v = (id) => form.querySelector('#' + id).value.trim();
       if (!v('f-title')) return 'Scrivi almeno il titolo.';
-      if (!v('f-cat')) return 'Scegli una categoria.';
       for (const o of options) {
         if (o.link && !safeUrl(o.link.trim())) return 'Il link di un\'opzione deve iniziare con http:// o https://';
       }
       const clean = options.map((o) => ({ label: (o.label || '').trim(), price: (o.price || '').trim(), link: (o.link || '').trim(), imgs: o.imgs.slice() })).filter((o) => o.label || o.price || o.link || o.imgs.length);
-      const { id, ...row } = { id: data.id, title: v('f-title'), note: v('f-note'), cat: v('f-cat'), options: clean, cover: clean.some((o) => o.imgs.includes(cover)) ? cover : '', done: !!data.done, createdAt: data.createdAt || Date.now() };
+      const { id, ...row } = { id: data.id, title: v('f-title'), note: v('f-note'), cats: picked.size ? CATEGORIE.filter((c) => picked.has(c)) : ['Altro'], options: clean, cover: clean.some((o) => o.imgs.includes(cover)) ? cover : '', done: !!data.done, createdAt: data.createdAt || Date.now() };
       try { await setDoc(doc(db, 'ideas', id), row); } catch (e) { console.error(e); return 'Salvataggio non riuscito (' + ((e && e.code) || 'errore') + '). ' + (e && e.code === 'permission-denied' ? 'Le regole di Firestore non ti riconoscono come proprietario: controlla che nelle regole ci sia il tuo UID e non "IL-TUO-UID".' : 'Sei ancora dentro?'); }
       close();
     }, 'Salva idea', { page: true });

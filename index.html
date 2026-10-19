@@ -189,6 +189,7 @@ body.is-detail #detail { display: block; }
 .gthumbs img { width: 100%; height: 100%; object-fit: cover; display: block; }
 @media (min-width: 780px) { .gdots { display: none; } .gthumbs { display: flex; } }
 .dinfo { display: flex; flex-direction: column; gap: var(--s-3); min-width: 0; }
+.cat-chips { display: flex; flex-wrap: wrap; gap: var(--s-2); }
 .chip-cat { align-self: flex-start; background: #fff; border: 1px solid var(--line); color: var(--ink-2); font-size: var(--fs-xs); font-weight: 800; padding: var(--s-1) var(--s-3); border-radius: var(--r-pill); }
 .dtitle { font-size: var(--fs-h1); line-height: 1.1; text-align: left; text-wrap: wrap; }
 .dprice { font-weight: 800; font-size: var(--fs-h2); }
@@ -230,6 +231,15 @@ body.is-detail #detail { display: block; }
 }
 .dlg .actions { display: flex; flex-wrap: wrap; gap: var(--s-3); justify-content: flex-end; margin-top: var(--s-5); }
 .dlg .inline { display: flex; gap: var(--s-2); }
+.field-label { margin: var(--s-4) 0 var(--s-2); font-weight: 800; font-size: var(--fs-sm); }
+.field-label span { color: var(--ink-2); font-weight: 700; }
+.catpick { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.dlg label.pickchip { display: inline-flex; align-items: center; gap: var(--s-2); min-height: 2.75rem; padding: 0 var(--s-4) 0 var(--s-3); border: 1.5px solid var(--line-field); border-radius: var(--r-pill); background: #fff; color: var(--ink); font-weight: 800; font-size: var(--fs-sm); margin: 0 !important; cursor: pointer; }
+.dlg label.pickchip.on { background: var(--accent-soft); border: 2px solid var(--accent); color: var(--accent-ink); padding-left: calc(var(--s-3) - 0.5px); }
+.pickchip input { appearance: none; -webkit-appearance: none; flex: 0 0 auto; width: 1.375rem; height: 1.375rem; margin: 0; border: 2px solid var(--line-field); border-radius: 6px; background: #fff; display: grid; place-content: center; cursor: pointer; }
+.pickchip input:checked { background: var(--accent); border-color: var(--accent); }
+.pickchip input:checked::after { content: ''; width: 0.75rem; height: 0.4rem; border-left: 2.5px solid #fff; border-bottom: 2.5px solid #fff; transform: rotate(-45deg) translate(1px, -1px); }
+.pickchip:focus-within { outline: 3px solid var(--ink); outline-offset: 2px; }
 .dlg .hint { margin: var(--s-1) 0 0; font-size: var(--fs-xs); color: var(--ink-2); font-weight: 600; }
 .dlg.sheet { text-align: center; padding: var(--s-6) var(--s-5) var(--s-8); }
 .dlg.sheet h3 { font-size: var(--fs-h1); margin-bottom: var(--s-3); }

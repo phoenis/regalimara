@@ -16,3 +16,5 @@ Note:
 - Foto: in "Nuova idea" incolla l'indirizzo dell'immagine (su Pinterest "Copia indirizzo immagine", di solito `i.pinimg.com`). Se la scheda originale viene rimossa, la foto può sparire.
 - Se `config.js` è vuoto la pagina è in modalità prova: nessuna idea e prenotazioni solo locali.
 - I valori di `config.js` sono pubblici per progettazione (identificano il progetto, non danno accesso). Per sicurezza in più, in Google Cloud Console > API e servizi > Credenziali limita la chiave API ai referrer `https://phoenis.github.io/*`.
+- **Area riservata:** non c'è un link nella pagina. Si entra dall'indirizzo `https://phoenis.github.io/regalimara/#/admin` (da tenere per te: la sicurezza viene comunque dall'accesso con email e password).
+- **Categorie:** si gestiscono dall'area riservata (pulsante "Categorie"). Servono le regole di `firestore.rules` aggiornate (c'è la parte `settings`): ripubblicale nella console dopo ogni modifica del file.

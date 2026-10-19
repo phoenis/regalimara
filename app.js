@@ -37,12 +37,15 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
 
   function el(tag, props, ...kids) {
     const n = document.createElement(tag);
-    if (props) for (const k in props) { if (k === 'class') n.className = props[k]; else if (k.startsWith('on')) n.addEventListener(k.slice(2), props[k]); else n.setAttribute(k, props[k]); }
+    if (props) for (const k in props) { if (props[k] == null || props[k] === false) continue; if (k === 'class') n.className = props[k]; else if (k.startsWith('on')) n.addEventListener(k.slice(2), props[k]); else n.setAttribute(k, props[k]); }
     for (const kid of kids) if (kid != null) n.append(kid);
     return n;
   }
   // Categorie ammesse, nell'ordine in cui compaiono nei filtri. Per aggiungerne una basta scriverla qui.
-  const CATEGORIE = ['Casa', 'Cucina', 'Fai da te', 'Creatività', 'Benessere', 'Esperienze', 'Libri', 'Moda e accessori', 'Altro'];
+  // L'elenco si gestisce dall'area riservata (salvato in Firebase). "Altro" c'è sempre, in fondo.
+  const CATEGORIE_BASE = ['Casa', 'Cucina', 'Fai da te', 'Creatività', 'Benessere', 'Esperienze', 'Libri', 'Moda e accessori'];
+  let CATEGORIE = [...CATEGORIE_BASE, 'Altro'];
+  const setCategorie = (list) => { CATEGORIE = [...list.filter((c) => c !== 'Altro'), 'Altro']; };
   const catOf = (it) => (CATEGORIE.includes(it.cat) ? it.cat : 'Altro');
   // Nei filtri solo le categorie che hanno almeno un'idea.
   const cats = () => CATEGORIE.filter((c) => state.items.some((i) => catOf(i) === c));
@@ -70,6 +73,8 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
   };
   const norm = (d) => { const { price, link, imgs, variants, ...rest } = d; return { ...rest, options: optionsOf(d) }; };
   // Foto di un'idea, nell'ordine delle sue opzioni (la prima serve da miniatura nell'elenco).
+  // Copertina scelta dal proprietario, se è ancora tra le foto dell'idea; altrimenti la prima foto.
+  const coverOf = (it) => { const all = imgsOf(it); const c = safeImg(it.cover); return c && all.includes(c) ? c : all[0]; };
   const imgsOf = (it) => [...new Set(it.options.flatMap((o) => o.imgs).map(safeImg).filter(Boolean))];
 
   function toast(text) {
@@ -85,6 +90,11 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
       state.items = snap.docs.map((d) => norm({ id: d.id, ...d.data() }));
       render();
     }, () => { state.loading = false; state.error = true; render(); });
+    onSnapshot(doc(db, 'settings', 'categories'), (snap) => {
+      const list = snap.exists() ? snap.data().list : null;
+      setCategorie(Array.isArray(list) && list.length ? list.filter((c) => typeof c === 'string' && c.trim()) : CATEGORIE_BASE);
+      render();
+    }, () => {});
     onSnapshot(collection(db, 'reservations'), (snap) => {
       state.reserved = new Map(snap.docs.map((d) => [d.id, d.data().uid]));
       render();
@@ -120,13 +130,6 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
 
   async function toggleDone(it) {
     try { await updateDoc(doc(db, 'ideas', it.id), { done: !it.done }); } catch (e) { toast('Salvataggio non riuscito.'); }
-  }
-
-  // Copia un'idea (stesso titolo, descrizione, categoria e opzioni), libera e in cima all'elenco.
-  async function duplicateItem(it) {
-    const id = 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4);
-    const row = { title: it.title, note: it.note || '', cat: it.cat, options: it.options.map((o) => ({ ...o, imgs: o.imgs.slice() })), done: false, createdAt: Date.now() };
-    try { await setDoc(doc(db, 'ideas', id), row); toast('Idea duplicata'); } catch (e) { toast('Non sono riuscito a duplicarla.'); }
   }
 
   async function deleteItem(it) {
@@ -175,7 +178,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
       return ph;
     };
     if (!imgs.length) { media.appendChild(placeholder()); return media; }
-    const main = el('img', { src: imgs[0], alt: it.title, loading: 'lazy', referrerpolicy: 'no-referrer' });
+    const main = el('img', { src: coverOf(it), alt: it.title, loading: 'lazy', referrerpolicy: 'no-referrer' });
     main.addEventListener('error', () => main.replaceWith(placeholder()));
     media.appendChild(main);
     return media;
@@ -192,7 +195,6 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
   function adminActions(it) {
     return el('div', { class: 'admin-actions' },
       el('button', { type: 'button', onclick: () => editItem(it) }, 'Modifica'),
-      el('button', { type: 'button', onclick: () => duplicateItem(it) }, 'Duplica'),
       state.reserved.has(it.id)
         ? el('button', { type: 'button', onclick: () => releaseRes(it) }, 'Libera prenotazione')
         : el('button', { type: 'button', onclick: () => toggleDone(it) }, it.done ? 'Rimetti in lista' : 'Segna come preso'),
@@ -207,11 +209,11 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
       document.title = 'Idee regalo per Mara'; return;
     }
     document.title = it.title + ' · Idee regalo per Mara';
-    if (galFor !== id) { galFor = id; galIdx = 0; }
     const opts = it.options;
     const single = opts.length === 1 ? opts[0] : null;
     // Una sola opzione: galleria con le sue foto. Più opzioni: righe tutte uguali, senza una foto principale.
     const imgs = single ? single.imgs.map(safeImg).filter(Boolean) : [];
+    if (galFor !== id) { galFor = id; galIdx = Math.max(0, imgs.indexOf(safeImg(it.cover))); }
     if (galIdx >= imgs.length) galIdx = 0;
     const taken = isTaken(it), mine = isMineRes(it.id);
     const url = single ? safeUrl(single.link) : '';
@@ -247,7 +249,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
       info.appendChild(el('div', { class: 'notice' }, heartIcon(), el('p', null, el('strong', null, 'Ne basta uno. '), 'Vanno bene tutti e ' + opts.length + ' gli stili: scegli quello che preferisci.')));
       const list = el('div', { class: 'opts' }, el('h2', null, opts.length + ' stili'));
       opts.forEach((o, n) => {
-        const ourl = safeUrl(o.link), oimg = safeImg(o.imgs.map(safeImg).find(Boolean));
+        const ourl = safeUrl(o.link), ofotos = o.imgs.map(safeImg).filter(Boolean), oimg = ofotos.includes(safeImg(it.cover)) ? safeImg(it.cover) : ofotos[0];
         const num = parseInt(String(it.id).replace(/\D/g, ''), 10) || 0;
         const thumb = oimg
           ? el('img', { src: oimg, alt: o.label || '', loading: 'lazy', referrerpolicy: 'no-referrer' })
@@ -311,9 +313,9 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
         el('h2', null, none ? 'Le idee arrivano presto' : 'Nessuna idea qui'),
         el('p', null, admin ? 'Premi "+ Nuova idea" per aggiungerne una.' : none ? 'Mara sta ancora preparando la lista. Ripassa tra qualche giorno.' : 'Nessuna idea in questa categoria, per ora.')));
     }
-    if (admin && state.items.length) {
+    if (admin) {
       const prese = state.items.filter(isTaken).length;
-      grid.appendChild(el('p', { class: 'counts' }, state.items.length + ' idee · ' + prese + ' prese · ' + (state.items.length - prese) + ' libere'));
+      grid.prepend(el('div', { class: 'counts' }, el('span', null, state.items.length + ' idee · ' + prese + ' prese · ' + (state.items.length - prese) + ' libere'), el('button', { class: 'linkbtn', type: 'button', onclick: manageCats }, 'Categorie')));
     }
     list.forEach((it) => {
       const taken = isTaken(it), mine = isMineRes(it.id);
@@ -351,13 +353,59 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
 
   function renderAdminBar() {
     const bar = $('adminbar'); bar.hidden = !admin; bar.className = admin ? 'admin-bar' : ''; bar.replaceChildren();
-    $('open-admin').hidden = admin || !live;
     if (!admin) return;
     bar.append(
       el('span', { class: 'dot', 'aria-hidden': 'true' }),
       el('strong', null, 'Gestione attiva'),
       el('button', { class: 'btn primary small', type: 'button', onclick: () => editItem(null) }, '+ Nuova idea'),
-      el('button', { class: 'btn ghost small', type: 'button', onclick: () => signOut(auth) }, 'Esci'));
+      el('button', { class: 'btn ghost small', type: 'button', onclick: () => { signOut(auth); history.replaceState(null, '', '#/'); } }, 'Esci'));
+  }
+
+  // ---------- categorie ----------
+  function manageCats() {
+    const rows = CATEGORIE.filter((c) => c !== 'Altro').map((c) => ({ orig: c, name: c }));
+    const box = el('div', { class: 'catlist' });
+    const usage = (c) => state.items.filter((i) => catOf(i) === c).length;
+    const draw = () => {
+      box.replaceChildren(...rows.map((r, n) => {
+        const input = el('input', { type: 'text', value: r.name, maxlength: '24', 'aria-label': 'Nome della categoria ' + (n + 1) });
+        input.addEventListener('input', () => { r.name = input.value; });
+        const swap = (d) => { const m = n + d; [rows[n], rows[m]] = [rows[m], rows[n]]; draw(); };
+        const used = r.orig ? usage(r.orig) : 0;
+        return el('div', { class: 'catrow' },
+          input,
+          el('span', { class: 'catuse', title: used + (used === 1 ? ' idea' : ' idee') }, used ? String(used) : ''),
+          el('button', { type: 'button', 'aria-label': 'Sposta su', disabled: n === 0 ? '' : null, onclick: () => swap(-1) }, '↑'),
+          el('button', { type: 'button', 'aria-label': 'Sposta giù', disabled: n === rows.length - 1 ? '' : null, onclick: () => swap(1) }, '↓'),
+          el('button', { type: 'button', class: 'danger', 'aria-label': 'Rimuovi la categoria ' + r.name, onclick: () => { rows.splice(n, 1); draw(); } }, '×'));
+      }), el('div', { class: 'catrow fixed' }, el('span', null, 'Altro'), el('span', { class: 'hint' }, 'sempre presente, in fondo')));
+    };
+    const newIn = el('input', { type: 'text', maxlength: '24', placeholder: 'Nuova categoria', 'aria-label': 'Nuova categoria' });
+    const addCat = () => { const v = newIn.value.trim(); if (!v) return; rows.push({ orig: '', name: v }); newIn.value = ''; draw(); };
+    newIn.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addCat(); } });
+    draw();
+    modal('Categorie', [
+      el('p', { class: 'hint' }, 'Le categorie sono quelle del menu delle idee e dei filtri. Il numero accanto al nome è quante idee la usano. Se rinomini una categoria, le sue idee la seguono. Se ne rimuovi una, le sue idee passano a "Altro".'),
+      box,
+      el('div', { class: 'inline' }, newIn, el('button', { class: 'btn', type: 'button', onclick: addCat }, 'Aggiungi'))],
+    async (form, close) => {
+      const names = rows.map((r) => r.name.trim());
+      if (names.some((n) => !n)) return 'Una categoria non ha il nome.';
+      const low = names.map((n) => n.toLowerCase());
+      if (new Set(low).size !== low.length) return 'Due categorie hanno lo stesso nome.';
+      if (low.includes('altro') || low.includes('tutte')) return '"Altro" e "Tutte" ci sono già: scegli un altro nome.';
+      const toNew = new Map(rows.filter((r) => r.orig).map((r) => [r.orig, r.name.trim()]));
+      const batch = writeBatch(db);
+      state.items.forEach((i) => {
+        const was = catOf(i);
+        if (was === 'Altro') return;
+        const now = toNew.has(was) ? toNew.get(was) : 'Altro';
+        if (now !== i.cat) batch.update(doc(db, 'ideas', i.id), { cat: now });
+      });
+      batch.set(doc(db, 'settings', 'categories'), { list: names, updatedAt: Date.now() });
+      try { await batch.commit(); } catch (e) { return 'Salvataggio non riuscito. Hai pubblicato le nuove regole di Firestore?'; }
+      close(); toast('Categorie salvate');
+    }, 'Salva categorie');
   }
 
   // ---------- finestre ----------
@@ -389,6 +437,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     const data = it || { id: 'i' + Date.now().toString(36), title: '', note: '', cat: filter !== 'Tutte' ? filter : '', options: [], done: false };
     const catSelect = el('select', { id: 'f-cat' }, el('option', { value: '' }, 'Scegli una categoria'), ...CATEGORIE.map((c) => el('option', { value: c }, c)));
     catSelect.value = isNew ? (CATEGORIE.includes(filter) ? filter : '') : catOf(data);
+    let cover = safeImg(data.cover) || '';
     const options = data.options.map((o) => ({ ...o, imgs: o.imgs.slice() }));
     if (!options.length) options.push({ label: '', price: '', link: '', imgs: [] });
     // Foto di un'opzione: si aggiungono incollando l'indirizzo dell'immagine.
@@ -396,9 +445,10 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
       const box = el('div', { class: 'imgs' });
       const msg = el('p', { class: 'hint' });
       const draw = () => {
-        box.replaceChildren(...list.map((src, n) => el('div', { class: 'it' },
+        box.replaceChildren(...list.map((src, n) => el('div', { class: 'it' + (src === cover ? ' is-cover' : '') },
           el('img', { src, alt: '', referrerpolicy: 'no-referrer' }),
-          el('button', { type: 'button', 'aria-label': 'Rimuovi foto', onclick: () => { list.splice(n, 1); draw(); } }, '×'))));
+          el('button', { type: 'button', 'aria-label': 'Rimuovi foto', onclick: () => { if (src === cover) cover = ''; list.splice(n, 1); drawOptions(); } }, '×'),
+          el('button', { type: 'button', class: 'cover-btn', 'aria-pressed': String(src === cover), 'aria-label': src === cover ? 'Questa è la copertina' : 'Usa come copertina', onclick: () => { cover = src; drawOptions(); } }, src === cover ? '★ Copertina' : '☆'))));
         msg.textContent = list.length + ' di ' + MAX_IMGS + ' foto.';
       };
       const input = el('input', { type: 'url', placeholder: 'Foto: indirizzo immagine https://…', 'aria-label': 'Foto: indirizzo immagine' });
@@ -432,7 +482,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
       ...field('f-note', 'Descrizione', el('textarea', { id: 'f-note', rows: '3', maxlength: '240' }, data.note)),
       ...field('f-cat', 'Categoria', catSelect),
       el('label', null, 'Opzioni (stili, modelli, negozi)'),
-      el('p', { class: 'hint' }, 'Tutte allo stesso livello: chi regala ne sceglie una e la prenotazione vale per l\'idea intera. Con una sola opzione la pagina mostra la sua galleria di foto. Da Pinterest, Amazon o Etsy: tieni premuto sulla foto (sul computer, tasto destro), scegli "Copia indirizzo immagine" e incollalo.'),
+      el('p', { class: 'hint' }, 'Tocca la ☆ su una foto per sceglierla come copertina: è quella che si vede nell\'elenco. Le opzioni sono tutte allo stesso livello: chi regala ne sceglie una e la prenotazione vale per l\'idea intera. Con una sola opzione la pagina mostra la sua galleria di foto. Da Pinterest, Amazon o Etsy: tieni premuto sulla foto (sul computer, tasto destro), scegli "Copia indirizzo immagine" e incollalo.'),
       oBox, addOption,
     ], async (form, close) => {
       const v = (id) => form.querySelector('#' + id).value.trim();
@@ -442,7 +492,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
         if (o.link && !safeUrl(o.link.trim())) return 'Il link di un\'opzione deve iniziare con http:// o https://';
       }
       const clean = options.map((o) => ({ label: (o.label || '').trim(), price: (o.price || '').trim(), link: (o.link || '').trim(), imgs: o.imgs.slice() })).filter((o) => o.label || o.price || o.link || o.imgs.length);
-      const { id, ...row } = { id: data.id, title: v('f-title'), note: v('f-note'), cat: v('f-cat'), options: clean, done: !!data.done, createdAt: data.createdAt || Date.now() };
+      const { id, ...row } = { id: data.id, title: v('f-title'), note: v('f-note'), cat: v('f-cat'), options: clean, cover: clean.some((o) => o.imgs.includes(cover)) ? cover : '', done: !!data.done, createdAt: data.createdAt || Date.now() };
       try { await setDoc(doc(db, 'ideas', id), row); } catch (e) { return 'Salvataggio non riuscito. Sei ancora dentro?'; }
       close();
     }, 'Salva idea');
@@ -459,15 +509,25 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     }, 'Entra');
   }
 
-  $('open-admin').addEventListener('click', openLogin);
+  // L'area riservata non ha un link in pagina: si entra dall'indirizzo #/admin.
+  let authReady = false;
+  function checkAdminRoute() {
+    if (location.hash !== '#/admin') return;
+    if (admin) { history.replaceState(null, '', '#/'); render(); return; }
+    if (authReady && !$('layer').children.length) openLogin();
+  }
+
   window.addEventListener('hashchange', () => {
     render();
-    if (routeId()) window.scrollTo(0, 0); else requestAnimationFrame(() => window.scrollTo(0, listScroll));
+    checkAdminRoute();
+    if (routeId()) window.scrollTo(0, 0); else if (location.hash !== '#/admin') requestAnimationFrame(() => window.scrollTo(0, listScroll));
   });
   if (live) {
     onAuthStateChanged(auth, (u) => {
       admin = !!u && !u.isAnonymous;
+      authReady = true;
       render();
+      checkAdminRoute();
       if (!u) signInAnonymously(auth).catch(() => {});
     });
   }

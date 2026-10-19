@@ -54,7 +54,7 @@ h1 span { color: var(--accent); font-style: italic; }
 
 /* ---------- elenco ---------- */
 .grid { display: flex; flex-direction: column; gap: var(--s-3); margin-top: var(--s-3); }
-.counts { margin: 0; color: var(--ink-2); font-weight: 700; font-size: var(--fs-sm); }
+.counts { margin: 0; color: var(--ink-2); font-weight: 700; font-size: var(--fs-sm); display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); }
 .card {
   background: var(--card); border-radius: var(--r-lg); box-shadow: var(--sh-card); padding: var(--s-3);
   display: grid; grid-template-columns: 5rem minmax(0, 1fr) auto; align-items: center; gap: var(--s-3); min-width: 0;
@@ -95,8 +95,8 @@ button.round:hover { filter: brightness(1.06); }
 @media (hover: hover) and (prefers-reduced-motion: no-preference) { .card { transition: box-shadow .15s, transform .15s; } .card:not(.done):not(.admin):hover { transform: translateY(-2px); box-shadow: var(--sh-hover); } }
 .card.admin { grid-template-columns: 5rem minmax(0, 1fr); align-items: start; }
 .card.admin .media { cursor: default; }
-.admin-actions { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--line); margin: var(--s-1) calc(-1 * var(--s-3)) calc(-1 * var(--s-1)); padding-top: var(--s-1); }
-.admin-actions button { min-height: 2.75rem; border: 0; background: transparent; font: 800 var(--fs-sm) var(--body); color: var(--ink); cursor: pointer; padding: 0 var(--s-3); white-space: nowrap; }
+.admin-actions { grid-column: 1 / -1; display: flex; justify-content: space-between; border-top: 1px solid var(--line); margin: var(--s-1) calc(-1 * var(--s-3)) calc(-1 * var(--s-1)); padding-top: var(--s-1); }
+.admin-actions button { flex: 0 0 auto; min-height: 2.75rem; border: 0; background: transparent; font: 800 var(--fs-sm) var(--body); color: var(--ink); cursor: pointer; padding: 0 var(--s-3); white-space: nowrap; }
 .admin-actions .danger { color: var(--danger); }
 .admin-box { margin-top: var(--s-2); background: var(--card); border-radius: var(--r-lg); box-shadow: var(--sh-card); padding: var(--s-1) var(--s-3); }
 .admin-box .admin-actions { margin: 0; border: 0; padding: 0; }
@@ -218,13 +218,24 @@ body.is-detail #detail { display: block; }
 .sheet-text { margin: 0 0 var(--s-2); font-size: var(--fs-body); }
 .sheet-sub { margin: 0; color: var(--ink-2); font-size: var(--fs-sm); }
 .imgs { display: flex; flex-wrap: wrap; gap: var(--s-2); margin: 6px 0; }
-.imgs .it { position: relative; width: 76px; height: 76px; border-radius: 10px; overflow: hidden; border: 1.5px solid var(--line); }
+.imgs .it { position: relative; width: 6.5rem; height: 6.5rem; border-radius: var(--r-md); overflow: hidden; border: 2px solid var(--line); }
+.imgs .it.is-cover { border-color: var(--accent); }
+.imgs .cover-btn { position: absolute; left: 0; right: 0; bottom: 0; height: 2rem; padding: 0; border: 0; background: rgba(38,36,71,.7); color: #fff; font: 800 var(--fs-xs) var(--body); cursor: pointer; }
+.imgs .it.is-cover .cover-btn { background: var(--accent); }
 .imgs .it img { width: 100%; height: 100%; object-fit: cover; }
 .imgs .it button { position: absolute; top: 2px; right: 2px; width: 28px; height: 28px; border: 0; border-radius: 50%; background: var(--ink); color: #fff; font-weight: 800; cursor: pointer; line-height: 1; }
 .vedit { display: flex; flex-direction: column; gap: var(--s-2); border: 1.5px solid var(--line); border-radius: var(--r-md); padding: var(--s-3); margin: var(--s-2) 0; }
 .vedit .vtitle { font-size: var(--fs-sm); color: var(--ink-2); }
 .photos { display: flex; flex-direction: column; gap: var(--s-1); }
 .vedit input[type=text], .vedit input[type=url] { width: 100%; font: inherit; font-size: var(--fs-sm); padding: var(--s-2) var(--s-3); border-radius: var(--r-sm); border: 1.5px solid var(--line-field); background: #fff; color: var(--ink); }
+.catlist { display: flex; flex-direction: column; gap: var(--s-2); margin: var(--s-3) 0; }
+.catrow { display: flex; align-items: center; gap: var(--s-2); }
+.catrow input { flex: 1; min-width: 0; }
+.catrow button { flex: 0 0 auto; width: 2.75rem; height: 2.75rem; border: 1.5px solid var(--line-field); border-radius: var(--r-sm); background: #fff; color: var(--ink); font: 800 var(--fs-body) var(--body); cursor: pointer; }
+.catrow button:disabled { opacity: .35; cursor: default; }
+.catrow button.danger { color: var(--danger); border-color: var(--danger); }
+.catuse { flex: 0 0 auto; min-width: 1.5rem; color: var(--ink-2); font-size: var(--fs-xs); font-weight: 800; text-align: center; }
+.catrow.fixed { color: var(--ink-2); font-weight: 800; justify-content: space-between; padding: var(--s-2) var(--s-1); }
 .msg { margin: var(--s-3) 0 0; font-weight: 700; color: var(--danger); min-height: 1.4em; font-size: var(--fs-sm); }
 .toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: #fff; padding: var(--s-3) var(--s-5); border-radius: var(--r-md); font-weight: 800; font-size: var(--fs-sm); z-index: 30; width: max-content; max-width: min(90vw, 28rem); text-align: center; }
 @media (max-width: 560px) {
@@ -247,7 +258,6 @@ body.is-detail #detail { display: block; }
   <section id="detail" aria-live="polite"></section>
   <footer>
     <span id="count"></span>
-    <button class="btn quiet" id="open-admin" type="button">Area riservata</button>
   </footer>
 </div>
 <div id="layer"></div>

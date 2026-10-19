@@ -32,7 +32,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     const hero = document.createElement('img');
     hero.className = 'hero'; hero.alt = ''; hero.src = ILLUSTRAZIONI.intestazione;
     hero.addEventListener('error', () => hero.remove());
-    $('head').appendChild(hero);
+    $('head').prepend(hero);
   }
 
   function el(tag, props, ...kids) {
@@ -75,7 +75,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
   function reserveItem(it) {
     modal('Lo prendi tu?', [el('p', { class: 'note' }, '«' + it.title + '» comparirà come già preso per tutti. Non serve nome né account. Se cambi idea, potrai annullare da questo telefono o computer.')],
       async (form, close) => {
-        if (!live) { demoRes[it.id] = 1; saveDemo(); state.reserved.set(it.id, 'demo'); close(); render(); toast('Prenotato (in prova: resta solo su questo browser)'); return; }
+        if (!live) { demoRes[it.id] = 1; saveDemo(); state.reserved.set(it.id, 'demo'); close(); render(); toast('Prenotato! (in prova, solo su questo browser)'); return; }
         try {
           const uid = await ensureUid();
           await setDoc(doc(db, 'reservations', it.id), { uid, createdAt: Date.now() });
@@ -115,6 +115,16 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
   }
 
   // ---------- schede ----------
+  function heartIcon() {
+    const ns = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('aria-hidden', 'true');
+    const p = document.createElementNS(ns, 'path');
+    p.setAttribute('d', 'M12 20.5s-7.5-4.8-9.6-9.6A5.4 5.4 0 0 1 12 6.4a5.4 5.4 0 0 1 9.6 4.5c-2.1 4.8-9.6 9.6-9.6 9.6z');
+    svg.appendChild(p);
+    return svg;
+  }
+
   function giftIcon() {
     const ns = 'http://www.w3.org/2000/svg';
     const svg = document.createElementNS(ns, 'svg');
@@ -132,7 +142,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     const ar = ['4 / 3', '1 / 1', '3 / 4', '5 / 4'][(parseInt(String(it.id).replace(/\D/g, ''), 10) || 0) % 4];
     const num = parseInt(String(it.id).replace(/\D/g, ''), 10) || 0;
     const placeholder = () => {
-      const ph = el('div', { class: 'ph', style: '--ar:' + ar, 'aria-hidden': 'true' });
+      const ph = el('div', { class: 'ph', style: '--ar:' + ar, 'data-t': String(num % 5), 'aria-hidden': 'true' });
       const arts = ILLUSTRAZIONI.segnaposto;
       if (arts.length) {
         const img = el('img', { src: arts[num % arts.length], alt: '' });
@@ -145,7 +155,6 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     const main = el('img', { src: imgs[0], alt: it.title, loading: 'lazy', referrerpolicy: 'no-referrer' });
     main.addEventListener('error', () => main.replaceWith(placeholder()));
     media.appendChild(main);
-    if (imgs.length > 1) media.appendChild(el('span', { class: 'more' }, '+' + (imgs.length - 1) + ' foto'));
     return media;
   }
 
@@ -213,18 +222,17 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     list.forEach((it) => {
       const taken = isTaken(it), isMine = isMineRes(it.id);
       const card = el('article', { class: 'card' + (taken ? ' done' : '') });
-      if (taken) card.appendChild(el('div', { class: 'stamp' }, isMine ? 'Lo prendi tu' : 'Già preso'));
-      const media = mediaOf(it); media.prepend(el('span', { class: 'tag' }, it.cat || 'Varie'));
+      const media = mediaOf(it);
       media.addEventListener('click', () => goDetail(it.id));
       card.appendChild(media);
       const body = el('div', { class: 'body' }, el('h2', null, el('button', { class: 'open', type: 'button', onclick: () => goDetail(it.id) }, it.title)));
-      if (it.note) body.appendChild(el('p', { class: 'note' }, it.note));
       if (it.price) body.appendChild(el('div', { class: 'price' }, it.price));
-      body.appendChild(el('button', { class: 'link-btn', type: 'button', onclick: () => goDetail(it.id) }, 'Dettagli →'));
-      if (!taken) body.appendChild(el('button', { class: 'btn primary reserve', type: 'button', onclick: () => reserveItem(it) }, 'Lo prendo io'));
-      else if (isMine) body.appendChild(el('button', { class: 'btn quiet reserve', type: 'button', onclick: () => releaseRes(it) }, 'Annulla'));
-      if (admin) body.appendChild(adminActions(it));
-      card.appendChild(body); grid.appendChild(card);
+      card.appendChild(body);
+      if (!taken) card.appendChild(el('button', { class: 'round', type: 'button', 'aria-label': 'Lo prendo io: ' + it.title, title: 'Lo prendo io', onclick: () => reserveItem(it) }, heartIcon()));
+      else if (isMine) card.appendChild(el('button', { class: 'pill', type: 'button', 'aria-label': 'Annulla la prenotazione di ' + it.title, onclick: () => releaseRes(it) }, 'Annulla'));
+      else card.appendChild(el('span', { class: 'pill taken' }, 'Preso'));
+      if (admin) card.appendChild(adminActions(it));
+      grid.appendChild(card);
     });
     const open = state.items.filter((i) => !isTaken(i)).length;
     $('count').textContent = state.loading ? '' : state.items.length + ' idee, ' + open + ' ancora da regalare';

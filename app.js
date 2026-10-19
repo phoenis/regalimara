@@ -213,16 +213,17 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     if (it.note) info.appendChild(el('p', { class: 'full' }, it.note));
     if (vars.length) {
       const grid = el('div', { class: 'vgrid' });
-      vars.forEach((v) => {
+      vars.forEach((v, n) => {
         const vurl = safeUrl(v.link), vimg = safeImg(v.img);
         const img = vimg ? el('img', { src: vimg, alt: v.label || '', loading: 'lazy', referrerpolicy: 'no-referrer' }) : giftIcon();
         if (vimg) img.addEventListener('error', () => img.replaceWith(giftIcon()));
         const pic = el('div', { class: 'vimg' }, img);
         grid.appendChild(el('div', { class: 'vtile' },
-          vurl ? el('a', { class: 'vpic', href: vurl, target: '_blank', rel: 'noopener noreferrer', 'aria-label': 'Apri ' + (v.label || 'lo stile') }, pic) : pic,
-          el('div', { class: 'vname' }, v.label || 'Stile'),
-          v.price ? el('div', { class: 'vprice' }, v.price) : null,
-          vurl ? el('a', { class: 'btn vlink', href: vurl, target: '_blank', rel: 'noopener noreferrer', 'aria-label': 'Vedi su ' + (hostOf(vurl) || 'il sito') }, (hostOf(vurl) || 'Vedi') + ' ↗') : null));
+          vurl ? el('a', { class: 'vpic', href: vurl, target: '_blank', rel: 'noopener noreferrer', 'aria-label': 'Apri ' + (v.label || 'stile ' + (n + 1)) }, pic) : pic,
+          el('div', { class: 'vtext' },
+            el('div', { class: 'vname' }, v.label || 'Stile ' + (n + 1)),
+            v.price ? el('div', { class: 'vprice' }, v.price) : null,
+            vurl ? el('a', { class: 'btn vlink', href: vurl, target: '_blank', rel: 'noopener noreferrer', 'aria-label': 'Vedi su ' + (hostOf(vurl) || 'il sito') }, 'Vedi su ' + (hostOf(vurl) || 'il sito') + ' ↗') : null)));
       });
       info.appendChild(el('div', { class: 'variants' }, el('h2', null, vars.length > 1 ? 'Scegli lo stile che preferisci' : 'Dove trovarlo'), grid));
     }

@@ -122,6 +122,13 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     try { await updateDoc(doc(db, 'ideas', it.id), { done: !it.done }); } catch (e) { toast('Salvataggio non riuscito.'); }
   }
 
+  // Copia un'idea (stesso titolo, descrizione, categoria e opzioni), libera e in cima all'elenco.
+  async function duplicateItem(it) {
+    const id = 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4);
+    const row = { title: it.title, note: it.note || '', cat: it.cat, options: it.options.map((o) => ({ ...o, imgs: o.imgs.slice() })), done: false, createdAt: Date.now() };
+    try { await setDoc(doc(db, 'ideas', id), row); toast('Idea duplicata'); } catch (e) { toast('Non sono riuscito a duplicarla.'); }
+  }
+
   async function deleteItem(it) {
     if (!confirm('Eliminare «' + it.title + '»?')) return;
     try {
@@ -185,6 +192,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
   function adminActions(it) {
     return el('div', { class: 'admin-actions' },
       el('button', { type: 'button', onclick: () => editItem(it) }, 'Modifica'),
+      el('button', { type: 'button', onclick: () => duplicateItem(it) }, 'Duplica'),
       state.reserved.has(it.id)
         ? el('button', { type: 'button', onclick: () => releaseRes(it) }, 'Libera prenotazione')
         : el('button', { type: 'button', onclick: () => toggleDone(it) }, it.done ? 'Rimetti in lista' : 'Segna come preso'),

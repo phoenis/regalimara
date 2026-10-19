@@ -95,8 +95,8 @@ button.round:hover { filter: brightness(1.06); }
 @media (hover: hover) and (prefers-reduced-motion: no-preference) { .card { transition: box-shadow .15s, transform .15s; } .card:not(.done):not(.admin):hover { transform: translateY(-2px); box-shadow: var(--sh-hover); } }
 .card.admin { grid-template-columns: 5rem minmax(0, 1fr); align-items: start; }
 .card.admin .media { cursor: default; }
-.admin-actions { grid-column: 1 / -1; display: flex; justify-content: space-between; border-top: 1px solid var(--line); margin: var(--s-1) calc(-1 * var(--s-3)) calc(-1 * var(--s-1)); padding-top: var(--s-1); }
-.admin-actions button { flex: 0 0 auto; min-height: 2.75rem; border: 0; background: transparent; font: 800 var(--fs-sm) var(--body); color: var(--ink); cursor: pointer; padding: 0 var(--s-3); white-space: nowrap; }
+.admin-actions { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--line); margin: var(--s-1) calc(-1 * var(--s-3)) calc(-1 * var(--s-1)); padding-top: var(--s-1); }
+.admin-actions button { min-height: 2.75rem; border: 0; background: transparent; font: 800 var(--fs-sm) var(--body); color: var(--ink); cursor: pointer; padding: 0 var(--s-3); white-space: nowrap; }
 .admin-actions .danger { color: var(--danger); }
 .admin-box { margin-top: var(--s-2); background: var(--card); border-radius: var(--r-lg); box-shadow: var(--sh-card); padding: var(--s-1) var(--s-3); }
 .admin-box .admin-actions { margin: 0; border: 0; padding: 0; }

@@ -399,6 +399,10 @@ button.fab.top { background: var(--free-soft); }
 .back svg, .gnav svg { width: 1.125rem; height: 1.125rem; }
 .adm-state { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.25rem; }
 .adm-by { color: var(--ink-2); font-size: 0.8125rem; }
+.newfab { position: fixed; left: 50%; bottom: max(1.25rem, env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 12; display: inline-flex; align-items: center; gap: 0.5rem; min-height: 3.25rem; padding: 0 1.5rem 0 1.25rem; border: 0; border-radius: 1.625rem; background: var(--accent); color: var(--on-accent); font: 800 1.0625rem var(--body); cursor: pointer; box-shadow: 0 6px 20px rgba(0,0,0,.25); white-space: nowrap; }
+.newfab span { font-size: 1.5rem; font-weight: 600; line-height: 1; margin-top: -2px; }
+body.is-detail .newfab { display: none; }
+body.is-admin #grid { padding-bottom: 5.5rem; }
 </style>
 </head>
 <body>
@@ -419,7 +423,7 @@ button.fab.top { background: var(--free-soft); }
 <!-- Idee mostrate solo finché config.js non è compilato (modalità prova). Con Firebase le idee vivono nel database. -->
 <script type="application/json" id="data">{"items":[]}</script>
 
-<script src="config.js?v=202610200533"></script>
-<script type="module" src="app.js?v=202610200533"></script>
+<script src="config.js?v=202610200534"></script>
+<script type="module" src="app.js?v=202610200534"></script>
 </body>
 </html>

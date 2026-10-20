@@ -431,11 +431,12 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
 
   function renderAdminBar() {
     const bar = $('adminbar'); bar.hidden = !admin; bar.className = admin ? 'admin-bar' : ''; bar.replaceChildren();
-    if (!admin) return;
+    let add = $('newfab');
+    if (!admin) { if (add) add.remove(); return; }
+    if (!add) { add = el('button', { id: 'newfab', class: 'newfab', type: 'button', onclick: () => editItem(null) }, el('span', { 'aria-hidden': 'true' }, '+'), 'Nuova idea'); document.body.appendChild(add); }
     bar.append(
       el('span', { class: 'dot', 'aria-hidden': 'true' }),
       el('strong', null, 'Gestione attiva'),
-      el('button', { class: 'btn primary small', type: 'button', onclick: () => editItem(null) }, '+ Nuova idea'),
       el('button', { class: 'btn ghost small', type: 'button', onclick: () => { signOut(auth); history.replaceState(null, '', '#/'); } }, 'Esci'));
   }
 

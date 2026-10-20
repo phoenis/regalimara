@@ -373,7 +373,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     const chips = $('chips'); chips.replaceChildren();
     ['Tutte', ...cats()].forEach((c) => chips.appendChild(el('button', { class: 'chip', type: 'button', 'aria-pressed': String(c === filter), onclick: () => { filter = c; render(); } }, c)));
 
-    const list = state.items.filter((i) => filter === 'Tutte' || catsOf(i).includes(filter));
+    const list = state.items.filter((i) => filter === 'Tutte' || catsOf(i).includes(filter)).sort((x, y) => x.title.localeCompare(y.title, 'it', { sensitivity: 'base', numeric: true }));
     const grid = $('grid'); grid.replaceChildren();
     if (state.loading) {
       grid.appendChild(el('p', { class: 'loading', role: 'status' }, 'Carico le idee…'));

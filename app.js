@@ -564,7 +564,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     drawOptions();
     modal(isNew ? 'Nuova idea' : 'Modifica idea', [
       ...field('f-title', 'Titolo', el('input', { id: 'f-title', type: 'text', value: data.title, maxlength: '80' })),
-      ...field('f-note', 'Descrizione', el('textarea', { id: 'f-note', rows: '3', maxlength: '240' }, data.note)),
+      ...field('f-note', 'Descrizione', el('textarea', { id: 'f-note', rows: '4' }, data.note)),
       el('p', { class: 'field-label' }, 'Categorie', el('span', null, ' · una o più')), catPick,
       el('p', { class: 'hint' }, 'L\'idea compare sotto ogni categoria scelta. Nessuna scelta = «Altro».'),
       el('label', null, 'Opzioni (modelli, colori, negozi)'),

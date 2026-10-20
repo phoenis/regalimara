@@ -405,9 +405,11 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
         ? (admin ? el('span', null, opts.length + ' opzioni') : el('span', { class: 'dots' }, el('i'), el('i'), el('i'), opts.length + ' opzioni'))
         : price ? el('span', null, price) : null;
       if (admin) {
-        const status = state.reserved.has(it.id) ? 'Preso da un invitato' : it.done ? 'Segnato preso da te' : '';
-        body.appendChild(el('div', { class: 'meta' }, tag, tag && !status ? ' · Libera' : null, !tag && !status ? 'Libera' : null));
-        if (status) body.appendChild(el('span', { class: 'chip-taken plain' }, status));
+        const status = state.reserved.has(it.id) ? 'da un invitato' : it.done ? 'segnato da te' : '';
+        if (tag) body.appendChild(el('div', { class: 'meta' }, tag));
+        body.appendChild(el('div', { class: 'adm-state' },
+          el('span', { class: 'chip-state ' + (taken ? 'taken' : 'free') }, taken ? checkIcon() : heartIcon(), taken ? 'Preso' : 'Libero'),
+          status ? el('span', { class: 'adm-by' }, status) : null));
       } else if (mine) {
         body.appendChild(el('div', { class: 'meta mine-meta' }, el('strong', null, 'Lo regali tu'), ' · ', el('button', { class: 'linkbtn', type: 'button', 'aria-label': 'Annulla la prenotazione di ' + it.title, onclick: () => releaseRes(it) }, 'Annulla')));
       } else if (taken) {

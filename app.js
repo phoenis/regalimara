@@ -70,7 +70,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
   // Un'idea ha delle opzioni (stili, modelli, negozi), tutte sullo stesso livello: nome, prezzo, link e foto.
   // Le idee salvate col vecchio formato (prezzo, link e foto dell'idea + varianti) si leggono come opzioni.
   const MAX_OPTIONS = 8;
-  const cleanOpt = (o) => ({ label: o.label || '', price: o.price || '', link: o.link || '', imgs: Array.isArray(o.imgs) ? o.imgs : [] });
+  const cleanOpt = (o) => ({ label: o.label || '', price: o.price || '', link: o.link || '', imgs: Array.isArray(o.imgs) ? o.imgs : [], fav: !!o.fav });
   const optionsOf = (d) => {
     if (Array.isArray(d.options)) return d.options.map(cleanOpt);
     const base = cleanOpt({ price: d.price, link: d.link, imgs: d.imgs });
@@ -84,6 +84,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
   // Preferenza del proprietario: da 1 a 5 stelle (0 = nessun voto).
   const ratingOf = (it) => { const n = Math.round(Number(it.rating)); return n >= 1 && n <= 5 ? n : 0; };
   const STAR = 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z';
+  const starIcon = () => starsEl(1).firstChild.cloneNode(true);
   function starsEl(n) {
     const ns = 'http://www.w3.org/2000/svg';
     const box = el('span', { class: 'stars', role: 'img', 'aria-label': 'Preferenza: ' + n + ' su 5' });
@@ -266,7 +267,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     const single = opts.length === 1 ? opts[0] : null;
     // In cima la galleria con le foto di tutte le opzioni; sotto, la lista completa delle opzioni.
     const slides = [];
-    opts.forEach((o, n) => o.imgs.map(safeImg).filter(Boolean).forEach((src) => { if (!slides.some((s) => s.src === src)) slides.push({ src, label: o.label || 'Opzione ' + (n + 1) }); }));
+    opts.forEach((o, n) => o.imgs.map(safeImg).filter(Boolean).forEach((src) => { if (!slides.some((s) => s.src === src)) slides.push({ src, label: (o.fav && opts.length > 1 ? '★ ' : '') + (o.label || 'Opzione ' + (n + 1)) }); }));
     const imgs = slides.map((s) => s.src);
     if (galFor !== id) { galFor = id; galIdx = Math.max(0, imgs.indexOf(safeImg(it.cover))); }
     if (galIdx >= imgs.length) galIdx = 0;
@@ -303,6 +304,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
             el('button', { class: 'gnav next', type: 'button', 'aria-label': 'Foto successiva', onclick: () => step(1) }, chevron(1)),
             count);
           track.addEventListener('scroll', () => {
+            if (!track.clientWidth) return;
             const n = Math.min(imgs.length - 1, Math.max(0, Math.round(track.scrollLeft / track.clientWidth)));
             if (n === galIdx) return;
             galIdx = n;
@@ -337,6 +339,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
           ourl ? el('a', { href: ourl, target: '_blank', rel: 'noopener noreferrer', 'aria-label': 'Apri ' + (o.label || 'opzione ' + (n + 1)) }, pic) : pic,
           el('div', { class: 'opt-text' },
             el('div', { class: 'opt-info' },
+              o.fav && opts.length > 1 ? el('span', { class: 'fav-tag' }, starIcon(), 'La mia preferita') : null,
               el('div', { class: 'opt-name' }, o.label || 'Opzione ' + (n + 1)),
               !ourl ? el('div', { class: 'opt-any' }, 'Va bene da qualsiasi negozio') : null),
             ourl ? el('a', { class: 'btn outline small', href: ourl, target: '_blank', rel: 'noopener noreferrer', 'aria-label': 'Vedi su ' + (shopOf(ourl) || 'il sito') }, 'Vedi su ' + (shopOf(ourl) || 'il sito'), arrowIcon()) : null)));
@@ -578,6 +581,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
           el('strong', { class: 'vtitle' }, 'Opzione ' + (n + 1)),
           inp('Nome (es. Verde salvia)', 'label'), inp('Prezzo (es. 29 €)', 'price'), inp('Link dove comprarlo https://…', 'link', 'url'),
           photoEditor(o.imgs),
+          options.length > 1 ? el('button', { class: 'favbtn' + (o.fav ? ' on' : ''), type: 'button', 'aria-pressed': String(!!o.fav), onclick: () => { const was = o.fav; options.forEach((x) => { x.fav = false; }); o.fav = !was; drawOptions(); } }, starIcon(), o.fav ? 'La mia preferita' : 'Segna come preferita') : null,
           options.length > 1 ? el('button', { class: 'btn danger', type: 'button', onclick: () => { options.splice(n, 1); drawOptions(); } }, 'Rimuovi opzione') : null);
       }));
     }
@@ -587,7 +591,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     const drawRate = () => {
       rateBox.replaceChildren(...[1, 2, 3, 4, 5].map((n) => {
         const b = el('button', { type: 'button', class: n <= rating ? 'on' : '', 'aria-label': n + ' su 5', 'aria-pressed': String(n === rating), onclick: () => { rating = rating === n ? 0 : n; drawRate(); } });
-        b.appendChild(starsEl(1).firstChild.cloneNode(true)); return b;
+        b.appendChild(starIcon()); return b;
       }));
     };
     drawRate();
@@ -608,7 +612,9 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
       for (const o of options) {
         if (o.link && !safeUrl(o.link.trim())) return 'Il link di un\'opzione deve iniziare con http:// o https://';
       }
-      const clean = options.map((o) => ({ label: (o.label || '').trim(), price: (o.price || '').trim(), link: (o.link || '').trim(), imgs: o.imgs.slice() })).filter((o) => o.label || o.price || o.link || o.imgs.length);
+      const clean = options.map((o) => ({ label: (o.label || '').trim(), price: (o.price || '').trim(), link: (o.link || '').trim(), imgs: o.imgs.slice(), fav: !!o.fav })).filter((o) => o.label || o.price || o.link || o.imgs.length);
+      if (clean.length < 2) clean.forEach((o) => { o.fav = false; });
+      else { let seen = false; clean.forEach((o) => { if (o.fav && seen) o.fav = false; seen = seen || o.fav; }); }
       const { id, ...row } = { id: data.id, title: v('f-title'), note: v('f-note'), rating, cats: picked.size ? CATEGORIE.filter((c) => picked.has(c)) : ['Altro'], options: clean, cover: clean.some((o) => o.imgs.includes(cover)) ? cover : '', done: !!data.done, createdAt: data.createdAt || Date.now() };
       try { await setDoc(doc(db, 'ideas', id), row); } catch (e) { console.error(e); return 'Salvataggio non riuscito (' + ((e && e.code) || 'errore') + '). ' + (e && e.code === 'permission-denied' ? 'Le regole di Firestore non ti riconoscono come proprietario: controlla che nelle regole ci sia il tuo UID e non "IL-TUO-UID".' : 'Sei ancora dentro?'); }
       close();

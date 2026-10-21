@@ -80,6 +80,19 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
   // Foto di un'idea, nell'ordine delle sue opzioni (la prima serve da miniatura nell'elenco).
   // Copertina scelta dal proprietario, se è ancora tra le foto dell'idea; altrimenti la prima foto.
   const coverOf = (it) => { const all = imgsOf(it); const c = safeImg(it.cover); return c && all.includes(c) ? c : all[0]; };
+  // Preferenza del proprietario: da 1 a 5 stelle (0 = nessun voto).
+  const ratingOf = (it) => { const n = Math.round(Number(it.rating)); return n >= 1 && n <= 5 ? n : 0; };
+  const STAR = 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z';
+  function starsEl(n) {
+    const ns = 'http://www.w3.org/2000/svg';
+    const box = el('span', { class: 'stars', role: 'img', 'aria-label': 'Preferenza: ' + n + ' su 5' });
+    for (let i = 1; i <= 5; i++) {
+      const svg = document.createElementNS(ns, 'svg'); svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('aria-hidden', 'true');
+      if (i > n) svg.setAttribute('class', 'off');
+      const p = document.createElementNS(ns, 'path'); p.setAttribute('d', STAR); svg.appendChild(p); box.appendChild(svg);
+    }
+    return box;
+  }
   const imgsOf = (it) => [...new Set(it.options.flatMap((o) => o.imgs).map(safeImg).filter(Boolean))];
 
   function toast(text) {
@@ -301,7 +314,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     }
 
     const info = el('div', { class: 'dinfo' });
-    info.append(el('div', { class: 'cat-chips' }, ...catsOf(it).map((c) => el('span', { class: 'chip-cat' }, c)),), el('h1', { class: 'dtitle' }, it.title));
+    info.append(el('div', { class: 'cat-chips' }, ...catsOf(it).map((c) => el('span', { class: 'chip-cat' }, c)),), el('h1', { class: 'dtitle' }, it.title), ratingOf(it) ? el('div', { class: 'dstars' }, starsEl(ratingOf(it)), el('span', null, 'Preferenza')) : null);
     if (it.note) info.append(el('h3', { class: 'sec' }, 'Dettagli'), el('p', { class: 'full' }, it.note));
 
     if (opts.length > 1) {
@@ -353,7 +366,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     media.appendChild(!taken
       ? el('button', { class: 'fab', type: 'button', 'aria-label': 'Lo prendo io: ' + it.title, title: 'Lo prendo io', onclick: (e) => { e.stopPropagation(); reserveItem(it); } }, heartIcon())
       : el('span', { class: 'fab ' + (mine ? 'on' : 'off'), 'aria-hidden': 'true' }, checkIcon()));
-    const body = el('div', { class: 'tbody' }, el('div', { class: 'tcats' }, ...catsOf(it).map((c) => el('span', { class: 'chip-cat' }, c))), el('h2', null, el('button', { class: 'open', type: 'button', onclick: () => goDetail(it.id) }, it.title)));
+    const body = el('div', { class: 'tbody' }, el('div', { class: 'tcats' }, ...catsOf(it).map((c) => el('span', { class: 'chip-cat' }, c))), el('h2', null, el('button', { class: 'open', type: 'button', onclick: () => goDetail(it.id) }, it.title)), ratingOf(it) ? starsEl(ratingOf(it)) : null);
     const price = opts.length > 1 ? null : (opts[0] && opts[0].price) || '';
     if (mine) body.appendChild(el('div', { class: 'meta mine-meta' }, el('strong', null, 'Lo regali tu'), ' · ', el('button', { class: 'linkbtn', type: 'button', 'aria-label': 'Annulla la prenotazione di ' + it.title, onclick: () => releaseRes(it) }, 'Annulla')));
     else if (taken) body.appendChild(el('span', { class: 'chip-taken' }, '✓ Preso'));
@@ -399,7 +412,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
       const media = mediaOf(it);
       media.addEventListener('click', () => goDetail(it.id));
       card.appendChild(media);
-      const body = el('div', { class: 'body' }, el('h2', null, el('button', { class: 'open', type: 'button', onclick: () => goDetail(it.id) }, it.title)));
+      const body = el('div', { class: 'body' }, el('h2', null, el('button', { class: 'open', type: 'button', onclick: () => goDetail(it.id) }, it.title)), ratingOf(it) ? starsEl(ratingOf(it)) : null);
       const price = opts.length > 1 ? null : (opts[0] && opts[0].price) || '';
       const tag = opts.length > 1
         ? (admin ? el('span', null, opts.length + ' opzioni') : el('span', { class: 'dots' }, el('i'), el('i'), el('i'), opts.length + ' opzioni'))
@@ -561,12 +574,23 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
       }));
     }
     const addOption = el('button', { class: 'btn', type: 'button', onclick: () => { if (options.length >= MAX_OPTIONS) { toast('Massimo ' + MAX_OPTIONS + ' opzioni'); return; } options.push({ label: '', price: '', link: '', imgs: [] }); drawOptions(); } }, 'Aggiungi un\'altra opzione');
+    let rating = ratingOf(data);
+    const rateBox = el('div', { class: 'ratepick', role: 'group', 'aria-label': 'Quanto lo vorresti' });
+    const drawRate = () => {
+      rateBox.replaceChildren(...[1, 2, 3, 4, 5].map((n) => {
+        const b = el('button', { type: 'button', class: n <= rating ? 'on' : '', 'aria-label': n + ' su 5', 'aria-pressed': String(n === rating), onclick: () => { rating = rating === n ? 0 : n; drawRate(); } });
+        b.appendChild(starsEl(1).firstChild.cloneNode(true)); return b;
+      }));
+    };
+    drawRate();
     drawOptions();
     modal(isNew ? 'Nuova idea' : 'Modifica idea', [
       ...field('f-title', 'Titolo', el('input', { id: 'f-title', type: 'text', value: data.title, maxlength: '80' })),
       ...field('f-note', 'Descrizione', el('textarea', { id: 'f-note', rows: '4' }, data.note)),
       el('p', { class: 'field-label' }, 'Categorie', el('span', null, ' · una o più')), catPick,
       el('p', { class: 'hint' }, 'L\'idea compare sotto ogni categoria scelta. Nessuna scelta = «Altro».'),
+      el('p', { class: 'field-label' }, 'Preferenza', el('span', null, ' · facoltativa')), rateBox,
+      el('p', { class: 'hint' }, 'Quanto vorresti riceverlo: da 1 a 5 stelle, visibili a tutti. Tocca di nuovo la stessa stella per toglierlo.'),
       el('label', null, 'Opzioni (modelli, colori, negozi)'),
       el('p', { class: 'hint' }, 'Tocca la ☆ su una foto per sceglierla come copertina: è quella che si vede nell\'elenco. Le opzioni sono tutte allo stesso livello: chi regala ne sceglie una e la prenotazione vale per l\'idea intera. Con una sola opzione la pagina mostra la sua galleria di foto. Da Pinterest, Amazon o Etsy: tieni premuto sulla foto (sul computer, tasto destro), scegli "Copia indirizzo immagine" e incollalo.'),
       oBox, addOption,
@@ -577,7 +601,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
         if (o.link && !safeUrl(o.link.trim())) return 'Il link di un\'opzione deve iniziare con http:// o https://';
       }
       const clean = options.map((o) => ({ label: (o.label || '').trim(), price: (o.price || '').trim(), link: (o.link || '').trim(), imgs: o.imgs.slice() })).filter((o) => o.label || o.price || o.link || o.imgs.length);
-      const { id, ...row } = { id: data.id, title: v('f-title'), note: v('f-note'), cats: picked.size ? CATEGORIE.filter((c) => picked.has(c)) : ['Altro'], options: clean, cover: clean.some((o) => o.imgs.includes(cover)) ? cover : '', done: !!data.done, createdAt: data.createdAt || Date.now() };
+      const { id, ...row } = { id: data.id, title: v('f-title'), note: v('f-note'), rating, cats: picked.size ? CATEGORIE.filter((c) => picked.has(c)) : ['Altro'], options: clean, cover: clean.some((o) => o.imgs.includes(cover)) ? cover : '', done: !!data.done, createdAt: data.createdAt || Date.now() };
       try { await setDoc(doc(db, 'ideas', id), row); } catch (e) { console.error(e); return 'Salvataggio non riuscito (' + ((e && e.code) || 'errore') + '). ' + (e && e.code === 'permission-denied' ? 'Le regole di Firestore non ti riconoscono come proprietario: controlla che nelle regole ci sia il tuo UID e non "IL-TUO-UID".' : 'Sei ancora dentro?'); }
       close();
     }, 'Salva idea', { page: true });

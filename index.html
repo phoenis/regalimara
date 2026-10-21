@@ -404,6 +404,16 @@ button.fab.top { background: var(--free-soft); }
 body.is-detail .newfab { display: none; }
 body.is-admin #grid { padding-bottom: 5.5rem; }
 .dlg textarea { resize: vertical; min-height: 6rem; line-height: 1.4; }
+.stars { display: inline-flex; gap: 2px; color: #F0A500; }
+.stars svg { width: 0.875rem; height: 0.875rem; fill: currentColor; }
+.stars svg.off { color: #D6D6DD; }
+.tbody .stars { margin-top: 2px; }
+.dstars { display: flex; align-items: center; gap: 0.5rem; padding-left: var(--inset, 1.25rem); color: var(--ink-2); font-size: 0.875rem; margin-top: -0.25rem; }
+.dstars .stars svg { width: 1.125rem; height: 1.125rem; }
+.ratepick { display: flex; gap: 0.25rem; margin: 0.25rem 0; }
+.ratepick button { width: 2.75rem; height: 2.75rem; border: 0; background: none; padding: 0; cursor: pointer; color: #D6D6DD; display: grid; place-items: center; }
+.ratepick button.on { color: #F0A500; }
+.ratepick svg { width: 1.75rem; height: 1.75rem; fill: currentColor; }
 </style>
 </head>
 <body>
@@ -424,7 +434,7 @@ body.is-admin #grid { padding-bottom: 5.5rem; }
 <!-- Idee mostrate solo finché config.js non è compilato (modalità prova). Con Firebase le idee vivono nel database. -->
 <script type="application/json" id="data">{"items":[]}</script>
 
-<script src="config.js?v=202610201329"></script>
-<script type="module" src="app.js?v=202610201329"></script>
+<script src="config.js?v=202610210624"></script>
+<script type="module" src="app.js?v=202610210624"></script>
 </body>
 </html>

@@ -23,9 +23,9 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
   try { demoRes = JSON.parse(localStorage.getItem('regali-demo') || '{}'); } catch (e) {}
   const saveDemo = () => { try { localStorage.setItem('regali-demo', JSON.stringify(demoRes)); } catch (e) {} };
   const state = { items: live ? [] : seed, reserved: new Map(live ? [] : Object.keys(demoRes).map((k) => [k, 'demo'])), loading: live, error: false };
-  let filter = 'Tutte', admin = false;
+  let filter = 'Tutte', admin = false, showArchive = false;
   const myUid = () => (live ? (auth.currentUser ? auth.currentUser.uid : null) : 'demo');
-  const isMineRes = (id) => state.reserved.has(id) && state.reserved.get(id) === myUid();
+  const isMineRes = (id) => !admin && state.reserved.has(id) && state.reserved.get(id) === myUid();
 
   if (!live) $('head').querySelector('.lede').after(el('p', { class: 'demo-note' }, 'Versione di prova: le prenotazioni restano solo su questo browser.'));
   if (ILLUSTRAZIONI.intestazione) {
@@ -64,7 +64,8 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     return h;
   };
   const hostOf = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return ''; } };
-  const isTaken = (it) => it.done || state.reserved.has(it.id);
+  // Dal pannello del proprietario le prenotazioni non si vedono (niente sorprese rovinate): solo l'archivio dei regali ricevuti.
+  const isTaken = (it) => it.done || (!admin && state.reserved.has(it.id));
   const MAX_IMGS = 4;
   // Un'idea ha delle opzioni (stili, modelli, negozi), tutte sullo stesso livello: nome, prezzo, link e foto.
   // Le idee salvate col vecchio formato (prezzo, link e foto dell'idea + varianti) si leggono come opzioni.
@@ -114,9 +115,9 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
       render();
     }, () => {});
     onSnapshot(collection(db, 'reservations'), (snap) => {
-      state.reserved = new Map(snap.docs.map((d) => [d.id, d.data().uid]));
+      state.reserved = admin ? new Map() : new Map(snap.docs.map((d) => [d.id, d.data().uid]));
       render();
-    });
+    }, () => {});
   }
   async function ensureUid() {
     if (auth.currentUser) return auth.currentUser.uid;
@@ -147,13 +148,17 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
   }
 
   async function toggleDone(it) {
-    try { await updateDoc(doc(db, 'ideas', it.id), { done: !it.done }); } catch (e) { toast('Salvataggio non riuscito.'); }
+    try {
+      await updateDoc(doc(db, 'ideas', it.id), { done: !it.done });
+      try { await deleteDoc(doc(db, 'reservations', it.id)); } catch (e) { /* nessuna prenotazione da togliere */ }
+      toast(it.done ? 'Rimessa in lista.' : 'Spostata nell\'archivio.');
+    } catch (e) { toast('Salvataggio non riuscito.'); }
   }
 
   async function deleteItem(it) {
     if (!confirm('Eliminare «' + it.title + '»?')) return;
     try {
-      if (state.reserved.has(it.id)) await deleteDoc(doc(db, 'reservations', it.id));
+      try { await deleteDoc(doc(db, 'reservations', it.id)); } catch (e) { /* nessuna prenotazione */ }
       await deleteDoc(doc(db, 'ideas', it.id));
     } catch (e) { toast('Non sono riuscito a eliminarla.'); }
   }
@@ -242,15 +247,13 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
   function adminActions(it) {
     return el('div', { class: 'admin-actions' },
       el('button', { type: 'button', onclick: () => editItem(it) }, 'Modifica'),
-      state.reserved.has(it.id)
-        ? el('button', { type: 'button', onclick: () => releaseRes(it) }, 'Libera prenotazione')
-        : el('button', { type: 'button', onclick: () => toggleDone(it) }, it.done ? 'Rimetti in lista' : 'Segna come preso'),
+      el('button', { type: 'button', onclick: () => toggleDone(it) }, it.done ? 'Rimetti in lista' : 'Segna come ricevuto'),
       el('button', { type: 'button', class: 'danger', onclick: () => deleteItem(it) }, 'Elimina'));
   }
 
   function renderDetail(id) {
     const box = $('detail'); box.replaceChildren(backLink(false));
-    const it = state.items.find((x) => x.id === id);
+    const it = state.items.find((x) => x.id === id && (admin || !x.done));
     if (!it) {
       box.appendChild(el('div', { class: 'empty-card' }, el('p', null, state.loading ? 'Carico l\'idea…' : 'Questa idea non c\'è più.')));
       document.title = 'Idee regalo per Mara'; return;
@@ -270,13 +273,13 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     const page = el('div', { class: 'dpage' });
 
     {
-      const status = !taken
+      const status = admin ? null : !taken
         ? el('button', { class: 'fab top', type: 'button', 'aria-label': 'Libero: lo prendo io', title: 'Lo prendo io', onclick: () => reserveItem(it) }, heartIcon(), el('span', null, 'Libero'))
         : el('span', { class: 'fab top ' + (mine ? 'on' : 'off') }, checkIcon(), el('span', null, 'Preso'));
       const gallery = el('div', { class: 'gallery' + (taken ? ' taken' : '') });
       if (!imgs.length) {
         const main = mediaOf({ ...it, options: [{ imgs: [] }] });
-        main.appendChild(status);
+        if (status) main.appendChild(status);
         gallery.appendChild(main);
       } else {
         const track = el('div', { class: 'track' }, ...slides.map((s) => {
@@ -314,7 +317,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     }
 
     const info = el('div', { class: 'dinfo' });
-    info.append(el('div', { class: 'cat-chips' }, ...catsOf(it).map((c) => el('span', { class: 'chip-cat' }, c)),), el('h1', { class: 'dtitle' }, it.title), ratingOf(it) ? el('div', { class: 'dstars' }, starsEl(ratingOf(it)), el('span', null, 'Preferenza')) : null);
+    info.append(el('div', { class: 'cat-chips' }, ...catsOf(it).map((c) => el('span', { class: 'chip-cat' }, c)),), el('h1', { class: 'dtitle' }, it.title), ...(ratingOf(it) ? [el('div', { class: 'dstars' }, starsEl(ratingOf(it)), el('span', null, 'Preferenza'))] : []));
     if (it.note) info.append(el('h3', { class: 'sec' }, 'Dettagli'), el('p', { class: 'full' }, it.note));
 
     if (opts.length > 1) {
@@ -354,7 +357,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
       bbAction));
     if (admin) info.appendChild(el('div', { class: 'admin-box' }, adminActions(it)));
     page.appendChild(info);
-    box.append(page, bar);
+    box.append(page, ...(admin ? [] : [bar]));
   }
 
   // Scheda dell'elenco: foto su riquadro chiaro, regalo sull'angolo, titolo e prezzo sotto.
@@ -380,13 +383,13 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     const rid = routeId();
     document.body.classList.toggle('is-detail', !!rid);
     document.body.classList.toggle('is-admin', admin);
-    document.body.classList.toggle('is-empty', !state.loading && !state.error && !state.items.length && !admin);
+    document.body.classList.toggle('is-empty', !state.loading && !state.error && !state.items.some((i) => !i.done) && !admin);
     if (rid) renderDetail(rid); else { $('detail').replaceChildren(); document.title = 'Idee regalo per Mara'; }
     if (filter !== 'Tutte' && !cats().includes(filter)) filter = 'Tutte';
     const chips = $('chips'); chips.replaceChildren();
     ['Tutte', ...cats()].forEach((c) => chips.appendChild(el('button', { class: 'chip', type: 'button', 'aria-pressed': String(c === filter), onclick: () => { filter = c; render(); } }, c)));
 
-    const list = state.items.filter((i) => filter === 'Tutte' || catsOf(i).includes(filter)).sort((x, y) => x.title.localeCompare(y.title, 'it', { sensitivity: 'base', numeric: true }));
+    const list = state.items.filter((i) => (admin ? i.done === showArchive : !i.done) && (filter === 'Tutte' || catsOf(i).includes(filter))).sort((x, y) => x.title.localeCompare(y.title, 'it', { sensitivity: 'base', numeric: true }));
     const grid = $('grid'); grid.replaceChildren();
     if (state.loading) {
       grid.appendChild(el('p', { class: 'loading', role: 'status' }, 'Carico le idee…'));
@@ -394,21 +397,25 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     } else if (state.error) {
       grid.appendChild(el('div', { class: 'empty-card' }, el('h2', null, 'Qualcosa non va'), el('p', null, 'Non riesco a caricare le idee. Riprova tra poco.')));
     } else if (!list.length) {
-      const none = !state.items.length;
+      const none = !state.items.some((i) => admin ? i.done === showArchive : !i.done);
       grid.appendChild(el('div', { class: 'empty-card' },
         none ? el('div', { class: 'empty-art', 'aria-hidden': 'true' }, giftIcon()) : null,
-        el('h2', null, none ? 'Le idee arrivano presto' : 'Nessuna idea qui'),
-        el('p', null, admin ? 'Premi "+ Nuova idea" per aggiungerne una.' : none ? 'Mara sta ancora preparando la lista. Ripassa tra qualche giorno.' : 'Nessuna idea in questa categoria, per ora.')));
+        el('h2', null, admin && showArchive ? 'Archivio vuoto' : none ? 'Le idee arrivano presto' : 'Nessuna idea qui'),
+        el('p', null, admin && showArchive ? 'Qui finiscono i regali che hai già ricevuto: usa «Segna come ricevuto» su un\'idea della lista.' : admin ? 'Premi "+ Nuova idea" per aggiungerne una.' : none ? 'Mara sta ancora preparando la lista. Ripassa tra qualche giorno.' : 'Nessuna idea in questa categoria, per ora.')));
     }
     if (admin) {
-      const prese = state.items.filter(isTaken).length;
-      grid.prepend(el('div', { class: 'counts' }, el('span', null, state.items.length + ' idee · ' + prese + ' prese · ' + (state.items.length - prese) + ' libere'), el('button', { class: 'linkbtn', type: 'button', onclick: manageCats }, 'Categorie')));
+      const archived = state.items.filter((i) => i.done).length;
+      grid.prepend(el('div', { class: 'counts' },
+        el('span', null, showArchive ? 'Archivio · ' + archived + (archived === 1 ? ' ricevuto' : ' ricevuti') : (state.items.length - archived) + ' idee in lista'),
+        el('span', { class: 'counts-links' },
+          el('button', { class: 'linkbtn', type: 'button', onclick: () => { showArchive = !showArchive; render(); window.scrollTo(0, 0); } }, showArchive ? '← Lista' : 'Archivio (' + archived + ')'),
+          el('button', { class: 'linkbtn', type: 'button', onclick: manageCats }, 'Categorie'))));
     }
     list.forEach((it) => {
       if (!admin) { grid.appendChild(tileFor(it)); return; }
       const taken = isTaken(it), mine = isMineRes(it.id);
       const opts = it.options;
-      const card = el('article', { class: 'card' + (taken && !mine ? ' done' : '') + (mine ? ' mine' : '') + (admin ? ' admin' : '') });
+      const card = el('article', { class: 'card' + (it.done ? ' done' : '') + ' admin' });
       const media = mediaOf(it);
       media.addEventListener('click', () => goDetail(it.id));
       card.appendChild(media);
@@ -418,11 +425,8 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
         ? (admin ? el('span', null, opts.length + ' opzioni') : el('span', { class: 'dots' }, el('i'), el('i'), el('i'), opts.length + ' opzioni'))
         : price ? el('span', null, price) : null;
       if (admin) {
-        const status = state.reserved.has(it.id) ? 'da un invitato' : it.done ? 'segnato da te' : '';
         if (tag) body.appendChild(el('div', { class: 'meta' }, tag));
-        body.appendChild(el('div', { class: 'adm-state' },
-          el('span', { class: 'chip-state ' + (taken ? 'taken' : 'free') }, taken ? checkIcon() : heartIcon(), taken ? 'Preso' : 'Libero'),
-          status ? el('span', { class: 'adm-by' }, status) : null));
+        if (it.done) body.appendChild(el('div', { class: 'adm-state' }, el('span', { class: 'chip-state taken' }, checkIcon(), 'Ricevuto')));
       } else if (mine) {
         body.appendChild(el('div', { class: 'meta mine-meta' }, el('strong', null, 'Lo regali tu'), ' · ', el('button', { class: 'linkbtn', type: 'button', 'aria-label': 'Annulla la prenotazione di ' + it.title, onclick: () => releaseRes(it) }, 'Annulla')));
       } else if (taken) {
@@ -436,9 +440,10 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
       else card.appendChild(el('span', { class: 'round ' + (mine ? 'on' : 'off'), 'aria-hidden': 'true' }, checkIcon()));
       grid.appendChild(card);
     });
-    const open = state.items.filter((i) => !isTaken(i)).length;
-    if (admin && state.items.length) grid.appendChild(el('p', { class: 'admin-note' }, 'Elimina chiede sempre conferma prima di cancellare.'));
-    $('count').textContent = state.loading || !state.items.length || admin ? '' : state.items.length + ' idee, ' + open + ' ancora da regalare';
+    const pub = state.items.filter((i) => !i.done);
+    const open = pub.filter((i) => !isTaken(i)).length;
+    if (admin && list.length) grid.appendChild(el('p', { class: 'admin-note' }, 'Elimina chiede sempre conferma prima di cancellare.'));
+    $('count').textContent = state.loading || !pub.length || admin ? '' : pub.length + ' idee, ' + open + ' ancora da regalare';
     renderAdminBar();
   }
 
@@ -634,6 +639,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
   if (live) {
     onAuthStateChanged(auth, (u) => {
       admin = !!u && !u.isAnonymous;
+      if (!admin) showArchive = false; else state.reserved = new Map();
       authReady = true;
       render();
       checkAdminRoute();

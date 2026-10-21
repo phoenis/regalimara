@@ -23,7 +23,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
   try { demoRes = JSON.parse(localStorage.getItem('regali-demo') || '{}'); } catch (e) {}
   const saveDemo = () => { try { localStorage.setItem('regali-demo', JSON.stringify(demoRes)); } catch (e) {} };
   const state = { items: live ? [] : seed, reserved: new Map(live ? [] : Object.keys(demoRes).map((k) => [k, 'demo'])), loading: live, error: false };
-  let filter = 'Tutte', admin = false, showArchive = false;
+  let filter = 'Tutte', admin = false, showArchive = false, searchText = '';
   const myUid = () => (live ? (auth.currentUser ? auth.currentUser.uid : null) : 'demo');
   const isMineRes = (id) => !admin && state.reserved.has(id) && state.reserved.get(id) === myUid();
 
@@ -94,6 +94,8 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     }
     return box;
   }
+  const fold = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const matches = (it) => { const q = fold(searchText).trim(); if (!q) return true; const hay = fold([it.title, it.note, ...catsOf(it), ...it.options.flatMap((o) => [o.label, o.price])].join(' ')); return q.split(/\s+/).every((w) => hay.includes(w)); };
   const imgsOf = (it) => [...new Set(it.options.flatMap((o) => o.imgs).map(safeImg).filter(Boolean))];
 
   function toast(text) {
@@ -386,10 +388,11 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     document.body.classList.toggle('is-empty', !state.loading && !state.error && !state.items.some((i) => !i.done) && !admin);
     if (rid) renderDetail(rid); else { $('detail').replaceChildren(); document.title = 'Idee regalo per Mara'; }
     if (filter !== 'Tutte' && !cats().includes(filter)) filter = 'Tutte';
+    $('search').hidden = !admin || !!rid;
     const chips = $('chips'); chips.replaceChildren();
     ['Tutte', ...cats()].forEach((c) => chips.appendChild(el('button', { class: 'chip', type: 'button', 'aria-pressed': String(c === filter), onclick: () => { filter = c; render(); } }, c)));
 
-    const list = state.items.filter((i) => (admin ? i.done === showArchive : !i.done) && (filter === 'Tutte' || catsOf(i).includes(filter))).sort((x, y) => x.title.localeCompare(y.title, 'it', { sensitivity: 'base', numeric: true }));
+    const list = state.items.filter((i) => (admin ? i.done === showArchive : !i.done) && (filter === 'Tutte' || catsOf(i).includes(filter)) && (!admin || matches(i))).sort((x, y) => x.title.localeCompare(y.title, 'it', { sensitivity: 'base', numeric: true }));
     const grid = $('grid'); grid.replaceChildren();
     if (state.loading) {
       grid.appendChild(el('p', { class: 'loading', role: 'status' }, 'Carico le idee…'));
@@ -400,13 +403,13 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
       const none = !state.items.some((i) => admin ? i.done === showArchive : !i.done);
       grid.appendChild(el('div', { class: 'empty-card' },
         none ? el('div', { class: 'empty-art', 'aria-hidden': 'true' }, giftIcon()) : null,
-        el('h2', null, admin && showArchive ? 'Archivio vuoto' : none ? 'Le idee arrivano presto' : 'Nessuna idea qui'),
-        el('p', null, admin && showArchive ? 'Qui finiscono i regali che hai già ricevuto: usa «Segna come ricevuto» su un\'idea della lista.' : admin ? 'Premi "+ Nuova idea" per aggiungerne una.' : none ? 'Mara sta ancora preparando la lista. Ripassa tra qualche giorno.' : 'Nessuna idea in questa categoria, per ora.')));
+        el('h2', null, admin && (searchText || filter !== 'Tutte') && !none ? 'Nessun risultato' : admin && showArchive ? 'Archivio vuoto' : none ? 'Le idee arrivano presto' : 'Nessuna idea qui'),
+        el('p', null, admin && (searchText || filter !== 'Tutte') && !none ? 'Prova con un\'altra parola o scegli «Tutte» tra le categorie.' : admin && showArchive ? 'Qui finiscono i regali che hai già ricevuto: usa «Segna come ricevuto» su un\'idea della lista.' : admin ? 'Premi "+ Nuova idea" per aggiungerne una.' : none ? 'Mara sta ancora preparando la lista. Ripassa tra qualche giorno.' : 'Nessuna idea in questa categoria, per ora.')));
     }
     if (admin) {
       const archived = state.items.filter((i) => i.done).length;
       grid.prepend(el('div', { class: 'counts' },
-        el('span', null, showArchive ? 'Archivio · ' + archived + (archived === 1 ? ' ricevuto' : ' ricevuti') : (state.items.length - archived) + ' idee in lista'),
+        el('span', null, showArchive ? (searchText || filter !== 'Tutte' ? 'Archivio · ' + list.length + ' trovate' : 'Archivio · ' + archived + (archived === 1 ? ' ricevuto' : ' ricevuti')) : (searchText || filter !== 'Tutte' ? list.length + ' trovate' : (state.items.length - archived) + ' idee in lista')),
         el('span', { class: 'counts-links' },
           el('button', { class: 'linkbtn', type: 'button', onclick: () => { showArchive = !showArchive; render(); window.scrollTo(0, 0); } }, showArchive ? '← Lista' : 'Archivio (' + archived + ')'),
           el('button', { class: 'linkbtn', type: 'button', onclick: manageCats }, 'Categorie'))));
@@ -631,6 +634,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     if (authReady && !$('layer').children.length) openLogin();
   }
 
+  $('q').addEventListener('input', (e) => { searchText = e.target.value; render(); });
   window.addEventListener('hashchange', () => {
     render();
     checkAdminRoute();
@@ -639,7 +643,7 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
   if (live) {
     onAuthStateChanged(auth, (u) => {
       admin = !!u && !u.isAnonymous;
-      if (!admin) showArchive = false; else state.reserved = new Map();
+      if (!admin) { showArchive = false; searchText = ''; const q = $('q'); if (q) q.value = ''; } else state.reserved = new Map();
       authReady = true;
       render();
       checkAdminRoute();

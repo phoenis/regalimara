@@ -150,7 +150,7 @@ footer { margin-top: var(--s-6); display: flex; flex-direction: column; align-it
 .admin-bar .dot { width: 0.6rem; height: 0.6rem; border-radius: 50%; background: #5BE0A5; }
 .admin-bar :focus-visible { outline-color: #fff; }
 body.is-admin header { align-items: flex-start; text-align: left; padding-top: var(--s-5); }
-body.is-admin .logo, body.is-admin .lede, body.is-admin .hero, body.is-admin .demo-note, body.is-admin #chips { display: none; }
+body.is-admin .logo, body.is-admin .lede, body.is-admin .hero, body.is-admin .demo-note { display: none; }
 body.is-admin h1 { font-size: var(--fs-h1); }
 .admin-note { margin: var(--s-2) 0 0; text-align: center; color: var(--ink-2); font-size: var(--fs-sm); }
 .admin-actions { border-top-color: #F5EFED; }
@@ -416,6 +416,12 @@ body.is-admin #grid { padding-bottom: 5.5rem; }
 .ratepick svg { width: 1.75rem; height: 1.75rem; fill: currentColor; }
 .counts-links { display: inline-flex; gap: 1rem; flex: 0 0 auto; }
 .counts-links .linkbtn { white-space: nowrap; }
+.search { max-width: 40rem; margin: 0.75rem auto 0; }
+.search input { width: 100%; font: inherit; font-size: 1rem; min-height: 2.75rem; padding: 0 1rem 0 2.75rem; border-radius: 1.375rem; border: 0; background: var(--accent-soft) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%236C6C75' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E") no-repeat 1rem center; color: var(--ink); -webkit-appearance: none; appearance: none; }
+.search input:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.search[hidden] { display: none; }
+body.is-detail #search { display: none; }
+@media (min-width: 660px) { body.is-admin #chips { max-width: 40rem; margin-inline: auto; justify-content: flex-start; } }
 </style>
 </head>
 <body>
@@ -424,6 +430,7 @@ body.is-admin #grid { padding-bottom: 5.5rem; }
   <header id="head">
     <h1>Idee regalo per <span>Mara</span></h1>
   </header>
+  <div class="search" id="search" hidden><input id="q" type="search" placeholder="Cerca un regalo…" aria-label="Cerca un regalo" autocomplete="off" enterkeyhint="search"></div>
   <div class="chips" id="chips" role="group" aria-label="Filtra per categoria"></div>
   <main class="grid" id="grid"></main>
   <section id="detail" aria-live="polite"></section>
@@ -436,7 +443,7 @@ body.is-admin #grid { padding-bottom: 5.5rem; }
 <!-- Idee mostrate solo finché config.js non è compilato (modalità prova). Con Firebase le idee vivono nel database. -->
 <script type="application/json" id="data">{"items":[]}</script>
 
-<script src="config.js?v=202610210654"></script>
-<script type="module" src="app.js?v=202610210654"></script>
+<script src="config.js?v=202610210721"></script>
+<script type="module" src="app.js?v=202610210721"></script>
 </body>
 </html>

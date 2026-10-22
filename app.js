@@ -23,7 +23,8 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
   try { demoRes = JSON.parse(localStorage.getItem('regali-demo') || '{}'); } catch (e) {}
   const saveDemo = () => { try { localStorage.setItem('regali-demo', JSON.stringify(demoRes)); } catch (e) {} };
   const state = { items: live ? [] : seed, reserved: new Map(live ? [] : Object.keys(demoRes).map((k) => [k, 'demo'])), loading: live, error: false };
-  let filter = 'Tutte', admin = false, showArchive = false, searchText = '';
+  let filter = 'Tutte', admin = false, showArchive = false, searchText = '', sortMode = 'name';
+  try { if (localStorage.getItem('regali-sort') === 'rating') sortMode = 'rating'; } catch (e) { /* senza memoria locale: ordine per nome */ }
   const myUid = () => (live ? (auth.currentUser ? auth.currentUser.uid : null) : 'demo');
   const isMineRes = (id) => !admin && state.reserved.has(id) && state.reserved.get(id) === myUid();
 
@@ -392,10 +393,12 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     if (rid) renderDetail(rid); else { $('detail').replaceChildren(); document.title = 'Idee regalo per Mara'; }
     if (filter !== 'Tutte' && !cats().includes(filter)) filter = 'Tutte';
     $('search').hidden = !admin || !!rid;
+    const sortBar = $('sort'); sortBar.replaceChildren(el('span', null, 'Ordina per'),
+      ...[['name', 'Nome'], ['rating', 'Preferenza ★']].map(([k, label]) => el('button', { type: 'button', class: 'sortbtn', 'aria-pressed': String(sortMode === k), onclick: () => { sortMode = k; try { localStorage.setItem('regali-sort', k); } catch (e) { /* ok */ } render(); } }, label)));
     const chips = $('chips'); chips.replaceChildren();
     ['Tutte', ...cats()].forEach((c) => chips.appendChild(el('button', { class: 'chip', type: 'button', 'aria-pressed': String(c === filter), onclick: () => { filter = c; render(); } }, c)));
 
-    const list = state.items.filter((i) => (admin ? i.done === showArchive : !i.done) && (filter === 'Tutte' || catsOf(i).includes(filter)) && (!admin || matches(i))).sort((x, y) => x.title.localeCompare(y.title, 'it', { sensitivity: 'base', numeric: true }));
+    const list = state.items.filter((i) => (admin ? i.done === showArchive : !i.done) && (filter === 'Tutte' || catsOf(i).includes(filter)) && (!admin || matches(i))).sort((x, y) => (sortMode === 'rating' ? ratingOf(y) - ratingOf(x) : 0) || x.title.localeCompare(y.title, 'it', { sensitivity: 'base', numeric: true }));
     const grid = $('grid'); grid.replaceChildren();
     if (state.loading) {
       grid.appendChild(el('p', { class: 'loading', role: 'status' }, 'Carico le idee…'));

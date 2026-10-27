@@ -349,8 +349,6 @@ const { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc,
     } else if (url) {
       info.appendChild(el('div', { class: 'buybox' }, el('h2', null, 'Idee su dove comprarlo'),
         el('a', { class: 'btn outline wide', href: url, target: '_blank', rel: 'noopener noreferrer' }, 'Vedi su ' + (shopOf(url) || 'il sito'), arrowIcon())));
-    } else {
-      info.appendChild(el('p', { class: 'hint-d' }, 'Per questa idea non c\'è un link: le foto servono a dare un\'idea.'));
     }
 
     const bbAction = !taken
